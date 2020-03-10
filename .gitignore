@@ -1,0 +1,12 @@
+Makefile
+autom4te.cache/
+config.status
+config.log
+Makefile
+src/.deps
+src/Makefile
+src/msc3
+src/msc2
+src/pcre4msc2-msc2.o
+src/pcre4msc3-msc3.o
+src/pcre4msc3-regex.o
