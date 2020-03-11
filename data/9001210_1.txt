@@ -1,0 +1,1 @@
+/editor/filter_xss/(?:full|basic)_html$

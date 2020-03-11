@@ -1,0 +1,1 @@
+/admin\.php\?options/update

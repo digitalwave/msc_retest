@@ -1,0 +1,1 @@
+/admin/content/assets/add/[a-z]+$

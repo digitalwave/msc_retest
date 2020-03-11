@@ -1,0 +1,1 @@
+(?i:(?:(?:(?:(?:trunc|cre|upd)at|renam)e|(?:inser|selec)t|de(?:lete|sc)|alter|load)\s*?\(\s*?space\s*?\(|,.*?[)\da-f\"'`][\"'`](?:[\"'`].*?[\"'`]|(?:\r?\n)?\z|[^\"'`]+)|\Wselect.+\W*?from))

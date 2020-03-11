@@ -1,0 +1,1 @@
+\xbc[^\xbe>]*[\xbe>]|<[^\xbe]*\xbe

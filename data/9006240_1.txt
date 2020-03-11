@@ -1,0 +1,1 @@
+/index\.php\?misc/find-emoji&q=

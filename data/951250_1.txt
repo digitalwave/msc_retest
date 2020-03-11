@@ -1,0 +1,1 @@
+(?i)(?:Warning.*sqlite_.*|Warning.*SQLite3::|SQLite/JDBCDriver|SQLite\.Exception|System\.Data\.SQLite\.SQLiteException)

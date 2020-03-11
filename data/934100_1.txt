@@ -1,0 +1,1 @@
+(?:(?:_(?:\$\$ND_FUNC\$\$_|_js_function)|(?:new\s+Function|\beval)\s*\(|String\s*\.\s*fromCharCode|function\s*\(\s*\)\s*{|this\.constructor)|module\.exports\s*=)

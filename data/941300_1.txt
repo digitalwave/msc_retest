@@ -1,0 +1,1 @@
+(?i)<OBJECT[\s/+].*?(?:type|codetype|classid|code|data)[\s/+]*=

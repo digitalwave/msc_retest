@@ -1,0 +1,1 @@
+(?i:^[\W\d]+\s*?(?:alter|union)\b)

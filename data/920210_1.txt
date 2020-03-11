@@ -1,0 +1,1 @@
+\b(?:keep-alive|close),\s?(?:keep-alive|close)\b

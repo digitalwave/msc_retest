@@ -1,0 +1,1 @@
+(?i)php://(?:std(?:in|out|err)|(?:in|out)put|fd|memory|temp|filter)

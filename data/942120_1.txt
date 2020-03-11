@@ -1,0 +1,1 @@
+(?i:(?:(?:^|\W)in[+\s]*\([\s\d\"]+[^()]*\)|\b(?:r(?:egexp|like)|isnull|xor)\b|<(?:>(?:\s+binary)?|=>?|<)|r(?:egexp|like)\s+binary|not\s+between\s+0\s+and|(?:like|is)\s+null|>[=>]|\|\||!=|&&))

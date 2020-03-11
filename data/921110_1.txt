@@ -1,0 +1,1 @@
+[\n\r]+(?:get|post|head|options|connect|put|delete|trace|track|patch|propfind|propatch|mkcol|copy|move|lock|unlock)\s+[^\s]+(?:\s+http|[\r\n])

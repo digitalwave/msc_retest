@@ -1,0 +1,1 @@
+(?i:(?:(?:n(?:and|ot)|(?:x?x)?or|between|\|\||like|and|div|&&)\s+\s*?\w+\(|\)\s*?when\s*?\d+\s*?then|[\"'`]\s*?(?:--|\{|#)|cha?r\s*?\(\s*?\d|\/\*!\s?\d+))

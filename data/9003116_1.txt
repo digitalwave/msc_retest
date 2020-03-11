@@ -1,0 +1,1 @@
+(?:/public\.php/webdav/|/remote\.php/dav/uploads/)
