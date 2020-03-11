@@ -46,3 +46,11 @@ Time elapsed: 0.00nnn, rc: -1
 Note, the `rc` means the return code of `pcre_exec()`.
 
 Now try again without `-j`, and the `src/pcre4msc3` too.
+
+For a complete CRS 3.2 test, try this:
+
+```
+for d in `ls -1 data/9*.txt`; do echo ${d}; src/pcre4msc2 ${d} /path/to/your/sibject; done
+for d in `ls -1 data/9*.txt`; do echo ${d}; src/pcre4msc2 -j ${d} /path/to/your/sibject; done
+for d in `ls -1 data/9*.txt`; do echo ${d}; src/pcre4msc3 ${d} /path/to/your/sibject; done
+```
