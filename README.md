@@ -1,7 +1,7 @@
-mscpcretest
+msc_pcretest
 ===========
 
-Welcome to the `mscpcretest` documentation.
+Welcome to the `msc_pcretest` documentation.
 
 Description
 ===========
