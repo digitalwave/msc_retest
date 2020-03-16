@@ -237,7 +237,7 @@ int main(int argc, char **argv) {
             strcpy(rcmatch, "matched");
         }
         translate_error(rc, rcerror);
-        printf("Time elapsed: %ld.%06ld, matched: %s, regex error: %s\n", (long int)tval_result.tv_sec, (long int)tval_result.tv_usec, rcmatch, rcerror);
+        printf("%s - time elapsed: %ld.%06ld, matched: %s, regex error: %s\n", patternfile, (long int)tval_result.tv_sec, (long int)tval_result.tv_usec, rcmatch, rcerror);
         memcpy(&tval_results[i], &tval_result, sizeof(struct timeval));
     }
 

@@ -89,7 +89,7 @@ int main(int argc, char ** argv) {
         end = clock();
         double sub = double(end - start) / double(CLOCKS_PER_SEC);
         translate_error(rc, rcerror);
-        std::cout << "Time elapsed: " << sub << ", matched: " << ((rc <= 0) ? "not matched" : "matched") << ", regex error: " << rcerror << std::endl;
+        std::cout << patternfile << " - time elapsed: " << sub << ", matched: " << ((rc <= 0) ? "not matched" : "matched") << ", regex error: " << rcerror << std::endl;
     }
 
     return 0;
