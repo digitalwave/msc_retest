@@ -5,7 +5,6 @@
 
 #include "regex.h"
 
-#include <pcre.h>
 #include <string>
 
 
@@ -30,6 +29,14 @@ Regex::Regex(const std::string& pattern_)
         &errptr, &erroffset, NULL);
 
     m_pce = pcre_study(m_pc, pcre_study_opt, &errptr);
+
+#if PCRE_CONFIG_JIT
+    int pijit;
+    int rc = pcre_fullinfo(m_pc, m_pce, PCRE_INFO_JIT, &pijit);
+    if ((rc != 0) || (pijit != 1)) {
+        printf("Regex does not support JIT (%d)\n", rc);
+    }
+#endif
 }
 
 
@@ -49,15 +56,72 @@ Regex::~Regex() {
 }
 
 
-int Regex::searchAll(const std::string& s) {
+int Regex::searchAll(const std::string& s, int debuginfo) {
     const char *subject = s.c_str();
     const std::string tmpString = std::string(s.c_str(), s.size());
     int ovector[OVECCOUNT];
     int rc, offset = 0;
 
+    std::list<SMatch> retList;
+
+    do {
+        rc = pcre_exec(m_pc, m_pce, subject,
+            s.size(), offset, 0, ovector, OVECCOUNT);
+
+        for (int i = 0; i < rc; i++) {
+            size_t start = ovector[2*i];
+            size_t end = ovector[2*i+1];
+            size_t len = end - start;
+            if (end > s.size()) {
+                rc = 0;
+                break;
+            }
+            std::string match = std::string(tmpString, start, len);
+            offset = start + len;
+            retList.push_front(SMatch(match, start));
+            if (debuginfo > 0) {
+                std::cout << "captured: " << match << std::endl;
+            }
+            if (len == 0) {
+                rc = 0;
+                break;
+            }
+        }
+    } while (rc > 0);
+
+    return retList.size();
+}
+
+int Regex::searchAll2(const std::string& s, int debuginfo) {
+    const char *subject = s.c_str();
+    const std::string tmpString = std::string(s.c_str(), s.size());
+    int ovector[OVECCOUNT];
+    int rc, offset = 0;
+
+    std::list<SMatch> retList;
+
     rc = pcre_exec(m_pc, m_pce, subject,
         s.size(), offset, 0, ovector, OVECCOUNT);
 
-    return rc;
-}
+    for (int i = 0; i < rc; i++) {
+        size_t start = ovector[2*i];
+        size_t end = ovector[2*i+1];
+        size_t len = end - start;
+        if (end > s.size()) {
+            rc = 0;
+            break;
+        }
+        std::string match = std::string(tmpString, start, len);
+        offset = start + len;
+        retList.push_front(SMatch(match, start));
+        if (debuginfo > 0) {
+            std::cout << "captured: " << match << std::endl;
+        }
+        if (len == 0) {
+            rc = 0;
+            break;
+        }
+    }
 
+    return retList.size();
+}
