@@ -1,1 +1,1 @@
-(?i)[\s\S]((?:x(?:link:href|html|mlns)|!ENTITY.*?(?:SYSTEM|PUBLIC)|data:text\/html|formaction|\@import|base64)\b|pattern\b.*?=)
+(?i)[\s\S](?:!ENTITY\s+(?:\S+|%\s+\S+)\s+(?:PUBLIC|SYSTEM)|x(?:link:href|html|mlns)|data:text\/html|pattern\b.*?=|formaction|\@import|;base64)\b

@@ -1,1 +1,1 @@
-/admin\.php\?threads/batch-update/action$
+/admin\.php\?(?:threads|users)/batch-update/action$

@@ -1,1 +1,1 @@
-(?i:(?:;\s*?(?:(?:(?:trunc|cre|upd)at|renam)e|(?:inser|selec)t|de(?:lete|sc)|alter|load)\s*?[\[(]?\w{2,}|create\s+function\s+.+\s+returns))
+(?i:(?:;\s*?(?:(?:(?:trunc|cre|upd)at|renam)e|(?:inser|selec)t|de(?:lete|sc)|alter|load)\b\s*?[\[(]?\w{2,}|create\s+function\s+.+\s+returns))
