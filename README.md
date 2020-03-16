@@ -128,4 +128,3 @@ src/pcre4msc3 -n 5 path/to/pattern path/to/subject
 src/pcre4msc2 -m 4000 -r 4000 path/to/pattern path/to/subject
 ```
 
-Enjoy.
