@@ -16,6 +16,14 @@ Useful information
 
 There are so many difference between mod_security2 and libmodsecurity3 implementations:
 
+Parsing:
+--------
+
+* mod_security2 is an Apache module, so it uses the avaliable functions, including parsing of configuration files. Apache config parser strips the extra `\` (backslash) characters, eg. if the rule in the config contains a substring like `\\\\'`, then it will evaluated as `\\'`.
+* libmodsecurity3 uses an own parser, and it doesn't make any strip methods.
+
+This strip function is implemented in `pcre4msc2` code.
+
 pcre_study(), JIT
 -----------------
 
