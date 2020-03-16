@@ -1,3 +1,14 @@
+v0.2 - YYYY-MM-DD
+
+  * Added more docs
+  * Added few options to the tools
+    * -j to use JIT
+    * -s to avoid to use of pcre_study
+    * -m match limit
+    * -r recursion limit (only in case of pcre4msc2)
+    * -n sepcify the number of run of test
+  * Added utils/ directory with a helper script
+  * Added all @rx argument from CRS v3.2
 v0.1 - 2020-03-10
 -----------------
   * Initial release

@@ -1,0 +1,4 @@
+All parts of directory are under license of GPL v3, except src/regex.cc and src/regex.h.
+
+These files are from the source tree of ModSecurity v3 with small modifications, therefore
+they are under Apache license.
