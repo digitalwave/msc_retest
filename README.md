@@ -20,9 +20,11 @@ Parsing:
 --------
 
 * mod_security2 is an Apache module, so it uses the avaliable functions, including parsing of configuration files. Apache config parser strips the extra `\` (backslash) characters, eg. if the rule in the config contains a substring like `\\\\'`, then it will evaluated as `\\'`.
-* libmodsecurity3 uses an own parser, and it doesn't make any strip methods.
+* libmodsecurity3 uses an own parser, and it doesn't make any strip methods. But it does if the rule defined in the configuration file of the webserver.
 
-This strip function is implemented in `pcre4msc2` code.
+This mean if the rule readed from the external file (like CRS), that will not be stripped, but if there is an inline rule (see [this](https://github.com/SpiderLabs/ModSecurity-nginx#modsecurity_rules)), then it will.
+
+This strip function is implemented in `pcre4msc2` code itself.
 
 pcre_study(), JIT
 -----------------
