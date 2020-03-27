@@ -7,8 +7,9 @@
 
 #include <pcre.h>
 #include <string.h>
-
-#define SETRCERROR(str)  strcpy(rcerror, #str); break;
+#ifndef __cplusplus
+#include <stdio.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" void translate_error(int, char *);

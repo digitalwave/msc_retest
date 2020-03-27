@@ -5,9 +5,10 @@
 
  */
 
-#include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
+#include <unistd.h>
+#include <ctype.h>
 #include "regexutils.h"
 
 #define OVECCOUNT 30    /* should be a multiple of 3 */
@@ -31,31 +32,49 @@ void showhelp(char * name) {
     printf("\n");
 }
 
-void strip_slashes(char * str) {
-    char tstr[FILESIZEMAX+1];
-    int i = 0;
-    char *c;
-    int last_is_slash = 0;
+/*
+  In mod_security2, the Apache reads the config, not the module.
+  The lines readed by ap_getword_conf(), declared in httpd.h,
+  code in server/util.c.
 
-    c = str;
-    while(*c != '\0') {
-        if (last_is_slash == 0) {
-            if (*c == '\\') {
-                last_is_slash = 1;
-            }
-            tstr[i++] = *c;
-        }
-        else {
-            last_is_slash = 0;
-            if (*c != '\\') {
-                tstr[i++] = *c;
-            }
-        }
-        c++;
+  It's called from ap_build_config(), which declared in http_config.h,
+  code in server/config.c.
+
+  The root of the whole chain is ap_read_config(), which delared
+  also in http_config.h, code also in server/config.c
+
+  ap_getword_conf() splits the line into words, and call substring_conf()
+  for all splitted token. substring_conf() code is in server/core.c, here
+  is the modified version with name strip_slashes()
+
+  This function does the same thing: removes the extra slashes:
+  \\   -> \
+  \\\\ -> \\
+  \"   -> "
+
+  Argument of @rx op usually quoted by " in modsecurity rules, so the
+  variable `quote` is fixed.
+
+  This routine is important, because this chain modifies the regular
+  expression near the operator.
+*/
+
+static char *strip_slashes(const char *start, int len) {
+    char *result = calloc(sizeof(char), len + 1);
+    char *resp = result;
+    char quote = '"';
+    int i;
+
+    for (i = 0; i < len; ++i) {
+        if (start[i] == '\\' && (start[i + 1] == '\\'
+                                 || (quote && start[i + 1] == quote)))
+            *resp++ = start[++i];
+        else
+            *resp++ = start[i];
     }
-    tstr[i] = '\0';
 
-    strcpy(str, tstr);
+    *resp++ = '\0';
+    return result;
 }
 
 int main(int argc, char **argv) {
@@ -63,12 +82,15 @@ int main(int argc, char **argv) {
     pcre_extra *pce = NULL;
     const char *error;
     char pattern[FILESIZEMAX+1];
+    char *escaped_pattern;
     char subject[FILESIZEMAX+1];
     int erroffset;
     int ovector[OVECCOUNT];
     int subject_length;
     int rc = 0, i, icnt = 1, pijit;
-    char rcerror[100], rcmatch[50];
+    char rcerror[100];
+    char c;
+    int ci;
     int use_jit = 0;
     int use_study = 1;
     int match_limit = 1000;
@@ -82,93 +104,125 @@ int main(int argc, char **argv) {
 
     if (argc < 3) {
       showhelp(argv[0]);
-      return 1;
+      return -1;
     }
 
-    for(i = 1; i < argc; i++) {
-        if (i == 1 && strcmp(argv[i], "-h") == 0) {
-            showhelp(argv[0]);
-            return 0;
-        }
-        if (strcmp(argv[i], "-n") == 0) {
-            icnt = atoi(argv[++i]);
-            if (icnt <= 0 || icnt > 10) {
-                printf("Ohh... Try to pass for '-n' an integer between 1 and 10\n");
-                return -1;
-            }
-        }
-        else if (strcmp(argv[i], "-s") == 0) {
-            use_study = 0;
-        }
+    while ((c = getopt (argc, argv, "hjmrsn:")) != -1) {
+        switch (c) {
+            case 'h':
+                showhelp(argv[0]);
+                return 0;
 #ifdef PCRE_CONFIG_JIT
-        else if (strcmp(argv[i], "-j") == 0) {
-            use_jit = 1;
-        }
+            case 'j':
+                use_jit = 1;
+                break;
 #endif
 #ifdef PCRE_EXTRA_MATCH_LIMIT
-        else if (strcmp(argv[i], "-m") == 0) {
-            match_limit = atoi(argv[++i]);
-            if (match_limit < 0 || icnt > 100000) {
-                printf("Ohh... Try to pass for '-m' an integer between 0 and 100000\n");
-                return -1;
-            }
-        }
+            case 'm':
+                match_limit = atoi(optarg);
+                if (match_limit < 0 || icnt > 100000) {
+                    fprintf(stderr, "Ohh... Try to pass for '-m' an integer between 0 and 100000\n");
+                    return -1;
+                }
 #endif
 #ifdef PCRE_EXTRA_MATCH_LIMIT_RECURSION
-        else if (strcmp(argv[i], "-r") == 0) {
-            match_limit_recursion = atoi(argv[++i]);
-            if (match_limit_recursion < 0 || icnt > 100000) {
-                printf("Ohh... Try to pass for '-r' an integer between 0 and 100000\n");
-                return -1;
-            }
-        }
-#endif
-        else {
-            if (patternfile == NULL) {
-                patternfile = argv[i];
-            }
-            else {
-                if (subjectfile == NULL) {
-                    subjectfile = argv[i];
+            case 'r':
+                match_limit_recursion = atoi(optarg);
+                if (match_limit_recursion < 0 || icnt > 100000) {
+                    fprintf(stderr, "Ohh... Try to pass for '-r' an integer between 0 and 100000\n");
+                    return -1;
                 }
+#endif
+            case 's':
+                use_study = 0;
+                break;
+            case 'n':
+                icnt = atoi(optarg);
+                if (icnt <= 0 || icnt > 10) {
+                    fprintf(stderr, "Ohh... Try to pass for '-n' an integer between 1 and 10\n");
+                    return -1;
+                }
+                break;
+            case '?':
+                if (optopt == 'n' || optopt == 'm' || optopt == 'r') {
+                    fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+                }
+                else if (isprint (optopt)) {
+                    fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+                }
+                else {
+                    fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
+                }
+                return -1;
+            default:
+                abort ();
+        }
+    }
+
+    for (i = optind; i < argc; i++) {
+        if (patternfile == NULL) {
+            patternfile = argv[i];
+        }
+        else {
+            if (subjectfile == NULL) {
+                subjectfile = argv[i];
             }
         }
+    }
+
+    if (patternfile == NULL || subjectfile == NULL) {
+        showhelp(argv[0]);
+        return -1;
     }
 
     // read pattern
     fp = fopen(patternfile, "r");
     if (fp == NULL) {
-        printf("Can't open file: %s\n", patternfile);
+        fprintf(stderr, "Can't open file: %s\n", patternfile);
         return -1;
     }
-    fgets(pattern, FILESIZEMAX, fp);
+    i = 0;
+    while ((ci = fgetc(fp)) != EOF && i < FILESIZEMAX) {
+        pattern[i++] = ci;
+    }
     fclose(fp);
+    if (i == FILESIZEMAX && ci != EOF) {
+        fprintf (stderr, "File too long: %s\n", patternfile);
+        return -1;
+    }
 
     // remove extra slashes
-    strip_slashes(pattern);
+    escaped_pattern = strip_slashes(pattern, strlen(pattern));
 
     // read subject
     fp = fopen(subjectfile, "r");
     if (fp == NULL) {
-        printf("Can't open file: %s\n", subjectfile);
+        fprintf(stderr, "Can't open file: %s\n", subjectfile);
         return -1;
     }
-    fgets(subject, FILESIZEMAX, fp);
+    i = 0;
+    while ((ci = fgetc(fp)) != EOF && i < FILESIZEMAX) {
+        subject[i++] = ci;
+    }
     subject_length = (int)strlen(subject);
     fclose(fp);
+    if (i == FILESIZEMAX && ci != EOF) {
+        fprintf (stderr, "File too long: %s\n", subjectfile);
+        return -1;
+    }
 
     re = pcre_compile(
-        pattern,              /* the pattern */
+        escaped_pattern,      /* the pattern */
         PCRE_DOTALL | PCRE_DOLLAR_ENDONLY, /* options from re_operators */
         &error,               /* for error message */
         &erroffset,           /* for error offset */
-        NULL                /* use default character tables */
+        NULL                  /* use default character tables */
     );
 
     if (re == NULL) {
-        printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
-        printf("Stripped regex: '%s'\n", pattern);
-        return 1;
+        fprintf(stderr, "PCRE compilation failed at offset %d: %s\n", erroffset, error);
+        fprintf(stderr, "Stripped regex: '%s'\n", escaped_pattern);
+        return -1;
     }
 
 #ifdef PCRE_CONFIG_JIT
@@ -187,11 +241,10 @@ int main(int argc, char **argv) {
 #endif
 
     if (pce == NULL) {
-        pce = malloc(sizeof(pcre_extra));
+        pce = calloc(1, sizeof(pcre_extra));
         if (pce == NULL) {
             return -1;
         }
-        memset(pce, 0, sizeof(pcre_extra));
     }
 
 #ifdef PCRE_EXTRA_MATCH_LIMIT
@@ -211,7 +264,7 @@ int main(int argc, char **argv) {
     if (use_jit == 1) {
         rc = pcre_fullinfo(re, pce, PCRE_INFO_JIT, &pijit);
         if ((rc != 0) || (pijit != 1)) {
-            printf("Regex does not support JIT (%d)\n", rc);
+            fprintf(stderr, "Regex does not support JIT (%d)\n", rc);
         }
     }
 #endif
@@ -230,20 +283,17 @@ int main(int argc, char **argv) {
         );
         gettimeofday(&tval_after, NULL);
         timersub(&tval_after, &tval_before, &tval_result);
-        if (rc <= 0) {
-            strcpy(rcmatch, "not matched");
-        }
-        else {
-            strcpy(rcmatch, "matched");
-        }
         translate_error(rc, rcerror);
-        printf("%s - time elapsed: %ld.%06ld, matched: %s, regex error: %s\n", patternfile, (long int)tval_result.tv_sec, (long int)tval_result.tv_usec, rcmatch, rcerror);
+        printf("%s - time elapsed: %ld.%06ld, match value: %s\n", patternfile, (long int)tval_result.tv_sec, (long int)tval_result.tv_usec, rcerror);
         memcpy(&tval_results[i], &tval_result, sizeof(struct timeval));
     }
 
     pcre_free(re);
     if (pce != NULL) {
         pcre_free(pce);
+    }
+    if (escaped_pattern != NULL) {
+        free(escaped_pattern);
     }
     return rc;
 }
