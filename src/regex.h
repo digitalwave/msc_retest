@@ -43,8 +43,8 @@ class Regex {
     pcre_extra *m_pce = NULL;
     int m_ovector[OVECCOUNT];
 
-    int searchAll(const std::string& s, int debuginfo);
-    int searchAll2(const std::string& s, int debuginfo);
+    int searchAll(const std::string& s, bool debuginfo);
+    int searchAll2(const std::string& s, bool debuginfo);
 };
 
 

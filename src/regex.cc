@@ -34,7 +34,7 @@ Regex::Regex(const std::string& pattern_)
     int pijit;
     int rc = pcre_fullinfo(m_pc, m_pce, PCRE_INFO_JIT, &pijit);
     if ((rc != 0) || (pijit != 1)) {
-        printf("Regex does not support JIT (%d)\n", rc);
+        std::cout << "Regex does not support JIT" << std::endl;
     }
 #endif
 }
@@ -56,7 +56,7 @@ Regex::~Regex() {
 }
 
 
-int Regex::searchAll(const std::string& s, int debuginfo) {
+int Regex::searchAll(const std::string& s, bool debuginfo) {
     const char *subject = s.c_str();
     const std::string tmpString = std::string(s.c_str(), s.size());
     int ovector[OVECCOUNT];
@@ -79,7 +79,7 @@ int Regex::searchAll(const std::string& s, int debuginfo) {
             std::string match = std::string(tmpString, start, len);
             offset = start + len;
             retList.push_front(SMatch(match, start));
-            if (debuginfo > 0) {
+            if (debuginfo == true) {
                 std::cout << "captured: " << match << std::endl;
             }
             if (len == 0) {
@@ -92,7 +92,7 @@ int Regex::searchAll(const std::string& s, int debuginfo) {
     return retList.size();
 }
 
-int Regex::searchAll2(const std::string& s, int debuginfo) {
+int Regex::searchAll2(const std::string& s, bool debuginfo) {
     const char *subject = s.c_str();
     const std::string tmpString = std::string(s.c_str(), s.size());
     int ovector[OVECCOUNT];
@@ -114,7 +114,7 @@ int Regex::searchAll2(const std::string& s, int debuginfo) {
         std::string match = std::string(tmpString, start, len);
         offset = start + len;
         retList.push_front(SMatch(match, start));
-        if (debuginfo > 0) {
+        if (debuginfo == true) {
             std::cout << "captured: " << match << std::endl;
         }
         if (len == 0) {

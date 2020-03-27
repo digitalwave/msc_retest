@@ -19,7 +19,7 @@ There are so many difference between mod_security2 and libmodsecurity3 implement
 Parsing:
 --------
 
-* mod_security2 is an Apache module, so it uses the avaliable functions, including parsing of configuration files. Apache config parser strips the extra `\` (backslash) characters, eg. if the rule in the config contains a substring like `\\\\'`, then it will evaluated as `\\'`.
+* mod_security2 is an Apache module, so it uses the avaliable functions, including parsing of configuration files. Apache config parser strips the extra `\` (backslash) characters and escaped " if it is inside of quoted string. Eg. if the rule in the config contains a substring like `\\\\'`, then it will evaluated as `\\'`, if there is a pattern `\"` in a quoted string, then it will be `"`.
 * libmodsecurity3 uses an own parser, and it doesn't make any strip methods. But it does if the rule defined in the configuration file of the webserver.
 
 This mean if the rule readed from the external file (like CRS), that will not be stripped, but if there is an inline rule (see [this](https://github.com/SpiderLabs/ModSecurity-nginx#modsecurity_rules)), then it will.
@@ -78,7 +78,7 @@ A quick how to:
 echo "(?i:random_regular_expression)" > pattern1.txt
 echo "random_subject" > subject1.txt
 src/pcre4msc2 pattern1.txt subject1.txt
-pattern1.txt - Time elapsed: 0.00nnn, matched: not matched, regex error: NOMATCH
+pattern1.txt - Time elapsed: 0.00nnn, match value: NOT MATCHED
 ```
 
 which means the subject doesn't matches with the regex.
@@ -114,16 +114,34 @@ Here are some examples:
 for d in `ls -1 data/9*.txt`; do src/pcre4msc2 ${d} /path/to/subject.txt; done
 ```
 
+**Same test but filter the rules with extra long times.**
+
+```bash
+for d in `ls -1 data/9*.txt`; do src/pcre4msc2 ${d} /path/to/subject.txt; done | grep "\([1-9][0-9]\|[1-9]\)\.[0-9]"
+```
+
 **Same tests but run it for libmodsecurity3 'engine'.**
 
 ```bash
 for d in `ls -1 data/9*.txt`; do src/pcre4msc3 ${d} /path/to/subject.txt; done
 ```
 
+**Use the filter here too.**
+
+```bash
+for d in `ls -1 data/9*.txt`; do src/pcre4msc3 ${d} /path/to/subject.txt; done | grep "\([1-9][0-9]\|[1-9]\)\.[0-9]"
+```
+
 **Same tests but use JIT.**
 
 ```bash
 for d in `ls -1 data/9*.txt`; do src/pcre4msc2 -j ${d} /path/to/subject.txt; done
+```
+
+**Check again and compare the long times with 2nd exampe.**
+
+```bash
+for d in `ls -1 data/9*.txt`; do src/pcre4msc2 -j ${d} /path/to/subject.txt; done | grep "\([1-9][0-9]\|[1-9]\)\.[0-9]"
 ```
 
 Note, see the difference in case of some patterns - it's awesome performance increase.

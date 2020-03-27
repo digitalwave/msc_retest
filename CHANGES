@@ -1,5 +1,16 @@
 v0.2 - YYYY-MM-DD
 
+  * Code refactoring
+    * replace argument parsing by getopt()
+    * replace strip_slashes() method by what Apache2 uses
+    * cleaned up the showhelp()
+    * changed type of logical variables from int to bool in
+      C++ code (pcre4msc3)
+    * cleaned up the whole translate_error() method
+    * showing of measured time in C++ code (pcre4msc3) is
+      more readable and conform with C code (pcre4msc2)
+    * added more info to README
+    * thanks for the notes in private for @MirkoDziadzka
   * Added more docs
   * Added few options to the tools
     * -j to use JIT
@@ -9,6 +20,7 @@ v0.2 - YYYY-MM-DD
     * -n sepcify the number of run of test
   * Added utils/ directory with a helper script
   * Added all @rx argument from CRS v3.2
+
 v0.1 - 2020-03-10
 -----------------
   * Initial release
