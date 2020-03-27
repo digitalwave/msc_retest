@@ -78,7 +78,7 @@ A quick how to:
 echo "(?i:random_regular_expression)" > pattern1.txt
 echo "random_subject" > subject1.txt
 src/pcre4msc2 pattern1.txt subject1.txt
-pattern1.txt - Time elapsed: 0.00nnn, matched: not matched, regex error: NOMATCH
+pattern1.txt - Time elapsed: 0.00nnn, match value: NOT MATCHED
 ```
 
 which means the subject doesn't matches with the regex.
