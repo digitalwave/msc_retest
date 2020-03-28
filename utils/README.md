@@ -40,3 +40,50 @@ Consider, there is a `chained` rule, and more parts uses `@rx`. In this case, yo
 9001184_2.txt
 9001184_3.txt
 ```
+
+All files contains the regular expression in one line. All line are terminates with the EOL, then the new line with EOF.
+
+# How to collect the subjects for patterns from CRS regression tests?
+
+In this directory, you can find a tool named `collect_subjects_from_crstests.py`.
+
+With helps of the script, you can collect the test strings for `@rx` operators from the CRS tests files.
+
+Install
+=======
+
+This tool needs only Python YAML library - install it through your package manager or from pypi.
+
+How does it work?
+=================
+
+To start the process, type:
+
+`./collect_subjects_from_crstests.py /PATH/TO/RULESET/tests/regression/.../9NNNN.yaml ../subjects`
+
+where the `/PATH/TO/RULESET/tests/regression/.../9NNNN.yaml` is the yaml test file of your rule set, `../subjects` is the destination - which is the part of this package. To be sure, before the run of this tool, remove the content of `../subjects` directory.
+
+Examples:
+
+`./collect_subjects_from_crstests.py /pat/to/source/of/owasp-modsecurity-crs/tests/regression/tests/REQUEST-942-APPLICATION-ATTACK-SQLI/942210.yaml ../subjects`
+
+What does it do?
+================
+
+Actually this tool is in very initial state. I only tested it with 942210 to collect the patterns. The result will so many subject for the tests:
+
+```bash
+942210-1.txt
+...
+942210-81.txt
+```
+
+All files contains a subject which used the `ftw` tool for the regression tests. You can use to check the pattern with this command:
+
+```bash
+for s in `ls -1 subjects/*.txt`; do src/pcre4msc2 data/942210_1.txt ${s}; done
+for s in `ls -1 subjects/*.txt`; do src/pcre4msc2 -j data/942210_1.txt ${s}; done
+for s in `ls -1 subjects/*.txt`; do src/pcre4msc3 data/942210_1.txt ${s}; done
+```
+
+

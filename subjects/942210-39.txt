@@ -1,0 +1,1 @@
+pay=@extension]=MmcDirectmailSubscription&tx_mmcdirectmailsubscription_subscr[__referrer][@vendor]=(SELECT
