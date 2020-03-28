@@ -4,7 +4,6 @@
 #include <fstream>
 #include <unistd.h>
 #include <ctype.h>
-// #include <sys/time.h>
 #include "regex.h"
 #include "regexutils.h"
 
@@ -82,8 +81,7 @@ int main(int argc, char ** argv) {
     std::ifstream pattf(patternfile);
     std::string pattern;
     if (pattf) {
-        pattern.assign((std::istreambuf_iterator<char>(pattf)),
-                             (std::istreambuf_iterator<char>()));
+        getline(pattf, pattern);
     }
     else {
         std::cout << "Can't open file: " << patternfile << std::endl;

@@ -1,7 +1,10 @@
 /*
- gcc -Wall demo.c -lpcre -o pcredemo
+ original sources are tree of mod_security2:
 
- original source: https://github.com/vmg/pcre/blob/master/pcredemo.c
+ https://github.com/SpiderLabs/ModSecurity/blob/v2/master/apache2/msc_pcre.c
+ https://github.com/SpiderLabs/ModSecurity/blob/v2/master/apache2/re_operators.c
+
+ strip_slashes() is from Apache2 source tree - server/core.c
 
  */
 
@@ -182,7 +185,10 @@ int main(int argc, char **argv) {
         return -1;
     }
     i = 0;
-    while ((ci = fgetc(fp)) != EOF && i < FILESIZEMAX) {
+    while ((ci = fgetc(fp))) {
+        if (ci == EOF || ci == '\n' || ci == '\r' || !(i < FILESIZEMAX)) {
+            break;
+        }
         pattern[i++] = ci;
     }
     fclose(fp);
