@@ -1,5 +1,6 @@
 v0.2 - YYYY-MM-DD
-
+-----------------
+  * Fix match_limit_recursion typo 
   * Code refactoring
     * replace argument parsing by getopt()
     * replace strip_slashes() method by what Apache2 uses

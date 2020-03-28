@@ -255,7 +255,7 @@ int main(int argc, char **argv) {
 #endif
 #ifdef PCRE_EXTRA_MATCH_LIMIT_RECURSION
     if (match_limit_recursion > 0) {
-        pce->match_limit = match_limit_recursion;
+        pce->match_limit_recursion = match_limit_recursion;
         pce->flags |= PCRE_EXTRA_MATCH_LIMIT_RECURSION;
     }
 #endif
