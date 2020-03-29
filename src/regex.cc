@@ -68,6 +68,8 @@ int Regex::searchAll(const std::string& s, bool debuginfo) {
         rc = pcre_exec(m_pc, m_pce, subject,
             s.size(), offset, 0, ovector, OVECCOUNT);
 
+        m_execrc = rc;
+
         for (int i = 0; i < rc; i++) {
             size_t start = ovector[2*i];
             size_t end = ovector[2*i+1];
@@ -102,6 +104,8 @@ int Regex::searchAll2(const std::string& s, bool debuginfo) {
 
     rc = pcre_exec(m_pc, m_pce, subject,
         s.size(), offset, 0, ovector, OVECCOUNT);
+
+    m_execrc = rc;
 
     for (int i = 0; i < rc; i++) {
         size_t start = ovector[2*i];

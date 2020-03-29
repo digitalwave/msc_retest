@@ -7,6 +7,7 @@
 
 #include <pcre.h>
 #include <string.h>
+#include <stdlib.h>
 #ifndef __cplusplus
 #include <stdio.h>
 #endif

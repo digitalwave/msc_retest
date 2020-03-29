@@ -1,5 +1,10 @@
 v0.2 - YYYY-MM-DD
 -----------------
+  * Add info for documentation
+  * Normalize exit status codes
+  * Set initial value for several variables
+  * Added `-t` cli option - it modifies the return value
+    of tools
   * Change original source reference in src/msc2.c
   * Modified pattern read methods in both implementations:
     read only the first line, avoid the multiline patterns

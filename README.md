@@ -78,10 +78,34 @@ A quick how to:
 echo "(?i:random_regular_expression)" > pattern1.txt
 echo "random_subject" > subject1.txt
 src/pcre4msc2 pattern1.txt subject1.txt
-pattern1.txt - Time elapsed: 0.00nnn, match value: NOT MATCHED
+pattern1.txt - time elapsed: 0.000009, match value: NOT MATCHED
 ```
 
-which means the subject doesn't matches with the regex.
+This means the subject doesn't matches with the regex, and the time taken 0.000009 sec (9 ms).
+
+You can check the exit status of program:
+```bash
+echo $?
+0
+```
+
+Now check the elapsed time in the output - that's a very important value. That shows you how long the regex engine runs. You can pass an argument to check that this time below your limit or not. For this, try to run:
+
+```bash
+src/pcre4msc2 -t 0.000001 pattern1.txt subject1.txt
+pattern1.txt - time elapsed: 0.000009, match value: NOT MATCHED
+echo $?
+1
+```
+
+As you can see, the time limit (argument of `-t`) is 0.000001 second (1 ms), it's less than the running time. If this is greather than your limit, the exit codes will 1. Try it again with a greather value:
+
+```bash
+src/pcre4msc2 -t 0.001 pattern1.txt subject1.txt
+pattern1.txt - time elapsed: 0.000009, match value: NOT MATCHED
+echo $?
+0
+```
 
 `src/pcre4msc3` works as same way.
 
@@ -98,6 +122,7 @@ Based on the [information](#Useful%20information':ignore') above, now let's see 
 |   `-n` | yes              | number of runs  |   supports | supports     |
 |   `-m` | yes              | mathch limit    |   supports | not supports |
 |   `-r` | yes              | match lim. rec. |   supports | not supports |
+|   `-t` | yes              | exec. time lim. |   supports |     supports |
 
 and `-h` of course.
 
@@ -130,6 +155,12 @@ for d in `ls -1 data/9*.txt`; do src/pcre4msc3 ${d} /path/to/subject.txt; done
 
 ```bash
 for d in `ls -1 data/9*.txt`; do src/pcre4msc3 ${d} /path/to/subject.txt; done | grep "\([1-9][0-9]\|[1-9]\)\.[0-9]"
+```
+
+**Collect regexes where the runtime over your limit (0.00001 sec)**
+
+```bash
+for d in `ls -1 data/9*.txt`; do src/pcre4msc2 -t 0.00001 -j ${d} /path/to/subject.txt; if [ $? -ne 0 ]; then echo "Time limit exceeded: ${d}"; fi; done | grep "Time limit"
 ```
 
 **Same tests but use JIT.**

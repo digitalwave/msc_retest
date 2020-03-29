@@ -32,6 +32,8 @@ void showhelp(char * name) {
 #ifdef PCRE_EXTRA_MATCH_LIMIT_RECURSION
     printf("\t-r R\tSet value R for the pcre_match_limit_recursion for pcre_extra. Default value is 1000.\n");
 #endif
+    printf("\t-t T\tExpects a float value; if the (last) pcre_exec time is greather than this,\n");
+    printf("\t    \tthe exit status of program will non-zero.\n");
     printf("\n");
 }
 
@@ -84,9 +86,9 @@ int main(int argc, char **argv) {
     pcre *re;
     pcre_extra *pce = NULL;
     const char *error;
-    char pattern[FILESIZEMAX+1];
+    char pattern[FILESIZEMAX+1] = "";
     char *escaped_pattern;
-    char subject[FILESIZEMAX+1];
+    char subject[FILESIZEMAX+1] = "";
     int erroffset;
     int ovector[OVECCOUNT];
     int subject_length;
@@ -98,23 +100,25 @@ int main(int argc, char **argv) {
     int use_study = 1;
     int match_limit = 1000;
     int match_limit_recursion = 1000;
-
+    float time_limit = 0.0;
 
     FILE *fp;
     const char * patternfile = NULL, * subjectfile = NULL;
     struct timeval tval_before, tval_after, tval_result;
-    struct timeval tval_results[10];
+
+    tval_result.tv_sec = 0;
+    tval_result.tv_usec = 0;
 
     if (argc < 3) {
       showhelp(argv[0]);
-      return -1;
+      return EXIT_FAILURE;
     }
 
-    while ((c = getopt (argc, argv, "hjmrsn:")) != -1) {
+    while ((c = getopt (argc, argv, "hjm:r:sn:t:")) != -1) {
         switch (c) {
             case 'h':
                 showhelp(argv[0]);
-                return 0;
+                return EXIT_SUCCESS;
 #ifdef PCRE_CONFIG_JIT
             case 'j':
                 use_jit = 1;
@@ -125,7 +129,7 @@ int main(int argc, char **argv) {
                 match_limit = atoi(optarg);
                 if (match_limit < 0 || icnt > 100000) {
                     fprintf(stderr, "Ohh... Try to pass for '-m' an integer between 0 and 100000\n");
-                    return -1;
+                    return EXIT_FAILURE;
                 }
 #endif
 #ifdef PCRE_EXTRA_MATCH_LIMIT_RECURSION
@@ -133,7 +137,7 @@ int main(int argc, char **argv) {
                 match_limit_recursion = atoi(optarg);
                 if (match_limit_recursion < 0 || icnt > 100000) {
                     fprintf(stderr, "Ohh... Try to pass for '-r' an integer between 0 and 100000\n");
-                    return -1;
+                    return EXIT_FAILURE;
                 }
 #endif
             case 's':
@@ -143,11 +147,18 @@ int main(int argc, char **argv) {
                 icnt = atoi(optarg);
                 if (icnt <= 0 || icnt > 10) {
                     fprintf(stderr, "Ohh... Try to pass for '-n' an integer between 1 and 10\n");
-                    return -1;
+                    return EXIT_FAILURE;
+                }
+                break;
+            case 't':
+                time_limit = atof(optarg);
+                if (time_limit <= 0.0) {
+                    fprintf(stderr, "Ohh... Time limit should be positive value.\n");
+                    return EXIT_FAILURE;
                 }
                 break;
             case '?':
-                if (optopt == 'n' || optopt == 'm' || optopt == 'r') {
+                if (optopt == 'n' || optopt == 'm' || optopt == 'r' || optopt == 't') {
                     fprintf (stderr, "Option -%c requires an argument.\n", optopt);
                 }
                 else if (isprint (optopt)) {
@@ -156,7 +167,7 @@ int main(int argc, char **argv) {
                 else {
                     fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
                 }
-                return -1;
+                return EXIT_FAILURE;
             default:
                 abort ();
         }
@@ -175,14 +186,14 @@ int main(int argc, char **argv) {
 
     if (patternfile == NULL || subjectfile == NULL) {
         showhelp(argv[0]);
-        return -1;
+        return EXIT_FAILURE;
     }
 
     // read pattern
     fp = fopen(patternfile, "r");
     if (fp == NULL) {
         fprintf(stderr, "Can't open file: %s\n", patternfile);
-        return -1;
+        return EXIT_FAILURE;
     }
     i = 0;
     while ((ci = fgetc(fp))) {
@@ -194,7 +205,7 @@ int main(int argc, char **argv) {
     fclose(fp);
     if (i == FILESIZEMAX && ci != EOF) {
         fprintf (stderr, "File too long: %s\n", patternfile);
-        return -1;
+        return EXIT_FAILURE;
     }
 
     // remove extra slashes
@@ -204,7 +215,7 @@ int main(int argc, char **argv) {
     fp = fopen(subjectfile, "r");
     if (fp == NULL) {
         fprintf(stderr, "Can't open file: %s\n", subjectfile);
-        return -1;
+        return EXIT_FAILURE;
     }
     i = 0;
     while ((ci = fgetc(fp)) != EOF && i < FILESIZEMAX) {
@@ -214,7 +225,7 @@ int main(int argc, char **argv) {
     fclose(fp);
     if (i == FILESIZEMAX && ci != EOF) {
         fprintf (stderr, "File too long: %s\n", subjectfile);
-        return -1;
+        return EXIT_FAILURE;
     }
 
     re = pcre_compile(
@@ -228,7 +239,7 @@ int main(int argc, char **argv) {
     if (re == NULL) {
         fprintf(stderr, "PCRE compilation failed at offset %d: %s\n", erroffset, error);
         fprintf(stderr, "Stripped regex: '%s'\n", escaped_pattern);
-        return -1;
+        return EXIT_FAILURE;
     }
 
 #ifdef PCRE_CONFIG_JIT
@@ -249,7 +260,7 @@ int main(int argc, char **argv) {
     if (pce == NULL) {
         pce = calloc(1, sizeof(pcre_extra));
         if (pce == NULL) {
-            return -1;
+            return EXIT_FAILURE;
         }
     }
 
@@ -291,7 +302,6 @@ int main(int argc, char **argv) {
         timersub(&tval_after, &tval_before, &tval_result);
         translate_error(rc, rcerror);
         printf("%s - time elapsed: %ld.%06ld, match value: %s\n", patternfile, (long int)tval_result.tv_sec, (long int)tval_result.tv_usec, rcerror);
-        memcpy(&tval_results[i], &tval_result, sizeof(struct timeval));
     }
 
     pcre_free(re);
@@ -301,5 +311,11 @@ int main(int argc, char **argv) {
     if (escaped_pattern != NULL) {
         free(escaped_pattern);
     }
-    return rc;
+
+    if (time_limit > 0.0) {
+        if (((double)tval_result.tv_sec + ((double)(tval_result.tv_usec))/1000000.0) > time_limit) {
+            return EXIT_FAILURE;
+        }
+    }
+    return EXIT_SUCCESS;
 }

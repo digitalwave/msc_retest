@@ -42,6 +42,9 @@ class Regex {
     pcre *m_pc = NULL;
     pcre_extra *m_pce = NULL;
     int m_ovector[OVECCOUNT];
+    // store pcre_exec return value for caller method
+    // note, this isn't part of original code
+    int m_execrc;
 
     int searchAll(const std::string& s, bool debuginfo);
     int searchAll2(const std::string& s, bool debuginfo);

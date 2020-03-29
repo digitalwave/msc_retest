@@ -8,34 +8,37 @@
 #include "regexutils.h"
 
 void showhelp(char * name) {
-    std::cerr << "Use: " << name << " [OPTIONS] patternfile subjectfile" << std::endl;
-    std::cerr << "OPTIONS:" << std::endl;
-    std::cerr << "\t-h\tThis help" << std::endl;
-    std::cerr << "\t-n N\titerate pcre_regex as Nth times. Default value is 1." << std::endl;
-    std::cerr << "\t-f\tForce to use modified regex matching method." << std::endl;
-    std::cerr << std::endl;
+    std::cout << "Use: " << name << " [OPTIONS] patternfile subjectfile" << std::endl;
+    std::cout << "OPTIONS:" << std::endl;
+    std::cout << "\t-h\tThis help" << std::endl;
+    std::cout << "\t-n N\titerate pcre_regex as Nth times. Default value is 1." << std::endl;
+    std::cout << "\t-f\tForce to use modified regex matching method." << std::endl;
+    std::cout << "\t-t T\tExpects a float value; if the (last) pcre_exec time is greather than this," << std::endl;
+    std::cout << "\t    \tthe exit status of program will non-zero." << std::endl;
+    std::cout << std::endl;
 }
 
 int main(int argc, char ** argv) {
     Regex *re;
-    int rc = 0;
     char rcerror[100];
     char * patternfile = NULL, * subjectfile = NULL;
     char c;
     int icnt = 1;
     bool use_fixed = false;
     bool debuginfo = false;
+    float time_limit = 0.0;
+    double m_sub = 0.0;
 
     if (argc < 3) {
       showhelp(argv[0]);
-      return -1;
+      return EXIT_FAILURE;
     }
 
-    while ((c = getopt (argc, argv, "hfmn:")) != -1) {
+    while ((c = getopt (argc, argv, "hfn:t:")) != -1) {
         switch (c) {
             case 'h':
                 showhelp(argv[0]);
-                return 0;
+                return EXIT_SUCCESS;
             case 'f':
                 use_fixed = true;
                 break;
@@ -43,11 +46,18 @@ int main(int argc, char ** argv) {
                 icnt = atoi(optarg);
                 if (icnt <= 0 || icnt > 10) {
                     std::cerr << "Ohh... Try to pass for '-n' an integer between 1 and 10" << std::endl;
-                    return -1;
+                    return EXIT_FAILURE;
+                }
+                break;
+            case 't':
+                time_limit = atof(optarg);
+                if (time_limit <= 0.0) {
+                    fprintf(stderr, "Ohh... Time limit should be positive value.\n");
+                    return EXIT_FAILURE;
                 }
                 break;
             case '?':
-                if (optopt == 'n') {
+                if (optopt == 'n' || optopt == 't') {
                     std::cerr << "Option -" << (char)optopt << " requires an argument." << std::endl;
                 }
                 else if (isprint (optopt)) {
@@ -56,10 +66,15 @@ int main(int argc, char ** argv) {
                 else {
                     std::cerr << "Unknown option character `\\x%x'." << std::endl;
                 }
-                return -1;
+                return EXIT_FAILURE;
             default:
                 abort ();
         }
+    }
+
+    if (time_limit > 0.0 && icnt > 1) {
+        std::cerr << "You can't use `-t` and `-n` (with value gt 1) at same time." << std::endl;
+        return EXIT_FAILURE;
     }
 
     for (int i = optind; i < argc; i++) {
@@ -75,9 +90,10 @@ int main(int argc, char ** argv) {
 
     if (patternfile == NULL || subjectfile == NULL) {
         showhelp(argv[0]);
-        return -1;
+        return EXIT_FAILURE;
     }
 
+    // read pattern
     std::ifstream pattf(patternfile);
     std::string pattern;
     if (pattf) {
@@ -87,6 +103,7 @@ int main(int argc, char ** argv) {
         std::cout << "Can't open file: " << patternfile << std::endl;
     }
 
+    // read subject
     std::ifstream subjf(subjectfile);
     std::string subject;
     if (subjf) {
@@ -102,17 +119,22 @@ int main(int argc, char ** argv) {
     for(int i = 0; i < icnt; i++) {
         clock_t m_start = clock();
         if (use_fixed == false) {
-            rc = re->searchAll(subject, debuginfo);
+            re->searchAll(subject, debuginfo);
         }
         else {
-            rc = re->searchAll2(subject, debuginfo);
+            re->searchAll2(subject, debuginfo);
         }
         clock_t m_end = clock();
-        double m_sub = (m_end - m_start) / double(CLOCKS_PER_SEC);
-        translate_error(rc, rcerror);
+        m_sub = (m_end - m_start) / double(CLOCKS_PER_SEC);
+        translate_error(re->m_execrc, rcerror);
         std::cout << patternfile << " - time elapsed: " << std::fixed << std::setfill('0') << std::setw(6) << m_sub << ", match value: " << rcerror << std::endl;
     }
 
-    return rc;
+    if (time_limit > 0.0) {
+        if (m_sub > time_limit) {
+            return EXIT_FAILURE;
+        }
+    }
+    return EXIT_SUCCESS;
 }
 
