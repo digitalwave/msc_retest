@@ -1,6 +1,9 @@
-v0.2 - YYYY-MM-DD
+v0.2 - 2020-04-02
 -----------------
+  * New release: 0.2
   * Add info for documentation
+  * Added `-d` option for detailed output
+    * look at the nicely formatted pattern matching
   * Normalize exit status codes
   * Set initial value for several variables
   * Added `-t` cli option - it modifies the return value

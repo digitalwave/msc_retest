@@ -75,10 +75,10 @@ Use
 A quick how to:
 
 ```bash
-echo "(?i:random_regular_expression)" > pattern1.txt
-echo "random_subject" > subject1.txt
-src/pcre4msc2 pattern1.txt subject1.txt
-pattern1.txt - time elapsed: 0.000009, match value: NOT MATCHED
+echo "this is what is this" > subject.txt
+echo "is" > pattern.txt
+src/pcre4mscm2 pattern.txt subject.txt
+pattern.txt - time elapsed: 0.000013, match value: SUBJECT MATCHED 1 TIME
 ```
 
 This means the subject doesn't matches with the regex, and the time taken 0.000009 sec (9 ms).
@@ -92,8 +92,8 @@ echo $?
 Now check the elapsed time in the output - that's a very important value. That shows you how long the regex engine runs. You can pass an argument to check that this time below your limit or not. For this, try to run:
 
 ```bash
-src/pcre4msc2 -t 0.000001 pattern1.txt subject1.txt
-pattern1.txt - time elapsed: 0.000009, match value: NOT MATCHED
+src/pcre4mscm2 -t 0.000001 pattern.txt subject.txt
+pattern.txt - time elapsed: 0.000013, match value: SUBJECT MATCHED 1 TIME
 echo $?
 1
 ```
@@ -101,8 +101,8 @@ echo $?
 As you can see, the time limit (argument of `-t`) is 0.000001 second (1 ms), it's less than the running time. If this is greather than your limit, the exit codes will 1. Try it again with a greather value:
 
 ```bash
-src/pcre4msc2 -t 0.001 pattern1.txt subject1.txt
-pattern1.txt - time elapsed: 0.000009, match value: NOT MATCHED
+src/pcre4mscm2 -t 0.0001 pattern.txt subject.txt
+pattern.txt - time elapsed: 0.000013, match value: SUBJECT MATCHED 1 TIME
 echo $?
 0
 ```
@@ -119,10 +119,11 @@ Based on the [information](#Useful%20information':ignore') above, now let's see 
 |-------:|-----------------:|----------------:|-----------:|-------------:|
 |   `-j` | no               | use jit         |   supports | not supports |
 |   `-s` | no               | ignore study    |   supports | not supports |
-|   `-n` | yes              | number of runs  |   supports | supports     |
+|   `-n` | yes              | number of runs  |   supports |     supports |
 |   `-m` | yes              | mathch limit    |   supports | not supports |
 |   `-r` | yes              | match lim. rec. |   supports | not supports |
 |   `-t` | yes              | exec. time lim. |   supports |     supports |
+|   `-d` | yes              | show debug      |   supports |     supports |
 
 and `-h` of course.
 
@@ -187,3 +188,139 @@ src/pcre4msc3 -n 5 path/to/pattern path/to/subject
 src/pcre4msc2 -m 4000 -r 4000 path/to/pattern path/to/subject
 ```
 
+**Show the detailed debug with created files above (pattern.txt, subject.txt)***
+```bash
+src/pcre4msc2 -d pattern.txt subject.txt
+
+RAW pattern:
+============
+is
+
+ESCAPED pattern:
+================
+is
+
+SUBJECT:
+========
+this is what is this
+
+JIT:
+====
+available but disabled
+
+STUDY:
+======
+enabled
+
+MATCH LIMIT:
+============
+1000
+
+MATCH LIMIT RECURSION:
+======================
+1000
+
+RESULT:
+=======
+pattern.txt - time elapsed: 0.000019, match value: SUBJECT MATCHED 1 TIME
+
+CAPTURES:
+=========
+th*is* is what is this
+
+OVECTOR:
+========
+[2, 4]
+
+```
+
+where the firs is printed with green color.
+
+**Show the detailed debug with pattern what contains escape***
+```bash
+echo "\"//onerror=\"" > subject2.txt
+src/pcre4msc2 -d data/941120_1.txt subject2.txt
+
+RAW pattern:
+============
+(?i)[\s\"'`;\/0-9=\x0B\x09\x0C\x3B\x2C\x28\x3B]+on[a-zA-Z]+[\s\x0B\x09\x0C\x3B\x2C\x28\x3B]*?=
+
+ESCAPED pattern:
+================
+(?i)[\s"'`;\/0-9=\x0B\x09\x0C\x3B\x2C\x28\x3B]+on[a-zA-Z]+[\s\x0B\x09\x0C\x3B\x2C\x28\x3B]*?=
+
+SUBJECT:
+========
+"//onerror="
+
+JIT:
+====
+available but disabled
+
+STUDY:
+======
+enabled
+
+MATCH LIMIT:
+============
+1000
+
+MATCH LIMIT RECURSION:
+======================
+1000
+
+RESULT:
+=======
+data/941120_1.txt - time elapsed: 0.000015, match value: SUBJECT MATCHED 1 TIME
+
+CAPTURES:
+=========
+*"//onerror=*"
+
+OVECTOR:
+========
+[0, 11]
+
+```
+
+As you can see, the escaped pattern is shorter than the original.
+
+Note, the substring between the two asterisks is also higlighted.
+
+**See the detailed output from the previous example with pcre4msc3**
+```bash
+src/pcre4msc3 -d pattern.txt subject.txt
+
+PATTERN:
+========
+is
+
+SUBJECT:
+========
+this is what is this
+
+JIT:
+====
+avaliable and used
+
+RESULT:
+=======
+pattern.txt - time elapsed: 0.000015, match value: SUBJECT MATCHED 4 TIMES
+
+CAPTURES:
+=========
+th*is* is what is this
+this *is* what is this
+this is what *is* this
+this is what is th*is*
+
+OVECTOR:
+========
+[2, 4, 5, 7, 13, 15, 18, 20]
+
+```
+As you can see, the ModSecurity3 pattern matching code founds the all occurance of substring. Note, that this isn't the escaped pattern part, because this engine doesn't do that. Match limit and match limit recursion also doesn't exists, because they aren't used.
+
+See the screenshot:
+
+![Detailed debug](images/detailed_debug.png)

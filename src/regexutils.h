@@ -18,4 +18,8 @@ extern "C" void translate_error(int, char *);
 void translate_error(int, char *);
 #endif
 
+#define RESET       "\033[0m"
+#define GREEN       "\033[32m"          /* Green */
+#define BOLDGREEN   "\033[1m\033[32m"   /* Bold Green */
+
 #endif

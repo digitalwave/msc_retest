@@ -16,6 +16,8 @@
 
 #define OVECCOUNT 900
 
+void debugvalue(int debuglevel, std::string label, std::string value);
+
 class SMatch {
  public:
     SMatch() :
@@ -36,18 +38,20 @@ class SMatch {
 
 class Regex {
  public:
-    explicit Regex(const std::string& pattern_);
+    explicit Regex(const std::string& pattern_, int debuglevel);
     ~Regex();
     std::string pattern;
+    // m_debuglevel: not part of original code:
+    int m_debuglevel;
     pcre *m_pc = NULL;
     pcre_extra *m_pce = NULL;
     int m_ovector[OVECCOUNT];
     // store pcre_exec return value for caller method
-    // note, this isn't part of original code
+    // note, this also isn't part of original code
     int m_execrc;
 
-    int searchAll(const std::string& s, bool debuginfo);
-    int searchAll2(const std::string& s, bool debuginfo);
+    std::list<SMatch> searchAll(const std::string& s);
+    std::list<SMatch> searchAll2(const std::string& s);
 };
 
 

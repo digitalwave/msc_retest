@@ -34,7 +34,50 @@ void showhelp(char * name) {
 #endif
     printf("\t-t T\tExpects a float value; if the (last) pcre_exec time is greather than this,\n");
     printf("\t    \tthe exit status of program will non-zero.\n");
+    printf("\t-d  \tShow debug information.\n");
     printf("\n");
+}
+
+/*
+ * this function is just print out the underlined label
+ * FOO ->
+ * FOO:
+ * ====
+ */
+void debuglabel(int debuglevel, char * label) {
+    if (debuglevel == 1) {
+        int len = (int)strlen(label)+1; // +1 -> append ":"
+        char * line = calloc(sizeof(char), len+2);
+        if (line == NULL) {
+            fprintf(stderr, "Failed to calloc temp str.");
+        }
+        for(int i = 0; i < len; i++) {
+            strcat(line, "=");
+        }
+        line[len+1] = '\0';
+        printf("\n%s:\n%s\n", label, line);
+        free(line);
+    }
+}
+
+/*
+ * show debug info with string argument
+ */
+void debugstr(int debuglevel, char * label, char * value) {
+    if (debuglevel == 1) {
+        debuglabel(debuglevel, label);
+        printf("%s\n", value);
+    }
+}
+
+/*
+ * show debug info with int argument
+ */
+void debugint(int debuglevel, char * label, int value) {
+    if (debuglevel == 1) {
+        debuglabel(debuglevel, label);
+        printf("%d\n", value);
+    }
 }
 
 /*
@@ -101,6 +144,7 @@ int main(int argc, char **argv) {
     int match_limit = 1000;
     int match_limit_recursion = 1000;
     float time_limit = 0.0;
+    int debuglevel = 0;
 
     FILE *fp;
     const char * patternfile = NULL, * subjectfile = NULL;
@@ -114,7 +158,7 @@ int main(int argc, char **argv) {
       return EXIT_FAILURE;
     }
 
-    while ((c = getopt (argc, argv, "hjm:r:sn:t:")) != -1) {
+    while ((c = getopt (argc, argv, "hjm:r:sn:t:d")) != -1) {
         switch (c) {
             case 'h':
                 showhelp(argv[0]);
@@ -156,6 +200,9 @@ int main(int argc, char **argv) {
                     fprintf(stderr, "Ohh... Time limit should be positive value.\n");
                     return EXIT_FAILURE;
                 }
+                break;
+            case 'd':
+                debuglevel = 1;
                 break;
             case '?':
                 if (optopt == 'n' || optopt == 'm' || optopt == 'r' || optopt == 't') {
@@ -228,6 +275,11 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
+    // show debug informations
+    debugstr(debuglevel, "RAW pattern", pattern);
+    debugstr(debuglevel, "ESCAPED pattern", escaped_pattern);
+    debugstr(debuglevel, "SUBJECT", subject);
+
     re = pcre_compile(
         escaped_pattern,      /* the pattern */
         PCRE_DOTALL | PCRE_DOLLAR_ENDONLY, /* options from re_operators */
@@ -245,21 +297,30 @@ int main(int argc, char **argv) {
 #ifdef PCRE_CONFIG_JIT
     if (use_jit == 1) {
         pce = pcre_study(re, PCRE_STUDY_JIT_COMPILE, &error);
+        debugstr(debuglevel, "JIT", "available and enabled");
+        debugstr(debuglevel, "STUDY", "enabled");
     }
     else {
         if (use_study == 1) {
             pce = pcre_study(re, 0, &error);
+            debugstr(debuglevel, "JIT", "available but disabled");
+            debugstr(debuglevel, "STUDY", "enabled");
         }
     }
 #else
     if (use_study == 1) {
         pce = pcre_study(re, 0, &error);
+        debugstr(debuglevel, "STUDY", "enabled");
+    }
+    else {
+        debugstr(debuglevel, "STUDY", "disabled");
     }
 #endif
 
     if (pce == NULL) {
         pce = calloc(1, sizeof(pcre_extra));
         if (pce == NULL) {
+            fprintf(stderr, "Calloc failure for `pce`.\n");
             return EXIT_FAILURE;
         }
     }
@@ -268,12 +329,14 @@ int main(int argc, char **argv) {
     if (match_limit > 0) {
         pce->match_limit = match_limit;
         pce->flags |= PCRE_EXTRA_MATCH_LIMIT;
+        debugint(debuglevel, "MATCH LIMIT", match_limit);
     }
 #endif
 #ifdef PCRE_EXTRA_MATCH_LIMIT_RECURSION
     if (match_limit_recursion > 0) {
         pce->match_limit_recursion = match_limit_recursion;
         pce->flags |= PCRE_EXTRA_MATCH_LIMIT_RECURSION;
+        debugint(debuglevel, "MATCH LIMIT RECURSION", match_limit_recursion);
     }
 #endif
 
@@ -285,6 +348,8 @@ int main(int argc, char **argv) {
         }
     }
 #endif
+
+    rc = 0; // initialize for debug level...
 
     for(i=0; i<icnt; i++) {
         gettimeofday(&tval_before, NULL);
@@ -301,7 +366,43 @@ int main(int argc, char **argv) {
         gettimeofday(&tval_after, NULL);
         timersub(&tval_after, &tval_before, &tval_result);
         translate_error(rc, rcerror);
+        debuglabel(debuglevel, "RESULT");
         printf("%s - time elapsed: %ld.%06ld, match value: %s\n", patternfile, (long int)tval_result.tv_sec, (long int)tval_result.tv_usec, rcerror);
+    }
+
+    // show captured substrings - only once
+    if (debuglevel == 1) {
+        debuglabel(debuglevel, "CAPTURES");
+        for(ci=0; ci < rc; ci++) {
+
+            // "prefix" - the first part of subject if the first match is gt 0
+            if (ovector[2*ci] > 0) {
+                char * tstr = strndup(subject, ovector[2*ci]);
+                printf("%s", tstr);
+                free(tstr);
+            }
+
+            // colorized substring
+            char * tstr = strndup(subject + ovector[2*ci], ovector[2*ci+1] - ovector[2*ci]);
+            printf(BOLDGREEN "%s" RESET, tstr);
+            free(tstr);
+
+            // "suffix" - the last part of subject if the last match left pos is lt length of subject
+            if (ovector[2*ci+1] < strlen(subject)) {
+                char * tstr = strndup(subject + ovector[2*ci+1], strlen(subject) - ovector[2*ci+1]);
+                printf("%s", tstr);
+                free(tstr);
+            }
+            printf("\n");
+        }
+
+        // show the ovector elements
+        debuglabel(debuglevel, "OVECTOR");
+        printf("[");
+        for(ci=0; ci < rc; ci++) {
+            printf("%d, %d%s", ovector[2*ci], ovector[2*ci+1], ((ci <= rc-2) ? ", " : ""));
+        }
+        printf("]\n");
     }
 
     pcre_free(re);

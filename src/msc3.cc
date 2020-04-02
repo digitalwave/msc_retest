@@ -15,6 +15,7 @@ void showhelp(char * name) {
     std::cout << "\t-f\tForce to use modified regex matching method." << std::endl;
     std::cout << "\t-t T\tExpects a float value; if the (last) pcre_exec time is greather than this," << std::endl;
     std::cout << "\t    \tthe exit status of program will non-zero." << std::endl;
+    std::cout << "\t-d  \tShow debug information." << std::endl;
     std::cout << std::endl;
 }
 
@@ -23,18 +24,18 @@ int main(int argc, char ** argv) {
     char rcerror[100];
     char * patternfile = NULL, * subjectfile = NULL;
     char c;
-    int icnt = 1;
+    int icnt = 1, rc = 0;
     bool use_fixed = false;
-    bool debuginfo = false;
     float time_limit = 0.0;
     double m_sub = 0.0;
+    int debuglevel = 0;  // may be later we can use different level...
 
     if (argc < 3) {
       showhelp(argv[0]);
       return EXIT_FAILURE;
     }
 
-    while ((c = getopt (argc, argv, "hfn:t:")) != -1) {
+    while ((c = getopt (argc, argv, "hfn:t:d")) != -1) {
         switch (c) {
             case 'h':
                 showhelp(argv[0]);
@@ -56,6 +57,9 @@ int main(int argc, char ** argv) {
                     return EXIT_FAILURE;
                 }
                 break;
+            case 'd':
+                debuglevel = 1;
+                break;
             case '?':
                 if (optopt == 'n' || optopt == 't') {
                     std::cerr << "Option -" << (char)optopt << " requires an argument." << std::endl;
@@ -70,11 +74,6 @@ int main(int argc, char ** argv) {
             default:
                 abort ();
         }
-    }
-
-    if (time_limit > 0.0 && icnt > 1) {
-        std::cerr << "You can't use `-t` and `-n` (with value gt 1) at same time." << std::endl;
-        return EXIT_FAILURE;
     }
 
     for (int i = optind; i < argc; i++) {
@@ -103,6 +102,8 @@ int main(int argc, char ** argv) {
         std::cout << "Can't open file: " << patternfile << std::endl;
     }
 
+    debugvalue(debuglevel, std::string("PATTERN"), pattern);
+
     // read subject
     std::ifstream subjf(subjectfile);
     std::string subject;
@@ -114,27 +115,66 @@ int main(int argc, char ** argv) {
         std::cout << "Can't open file: " << subjectfile << std::endl;
     }
 
-    re = new Regex(pattern);
+    debugvalue(debuglevel, std::string("SUBJECT"), subject);
+
+    re = new Regex(pattern, debuglevel);
+
+    std::list<SMatch> retval;
 
     for(int i = 0; i < icnt; i++) {
         clock_t m_start = clock();
         if (use_fixed == false) {
-            re->searchAll(subject, debuginfo);
+            retval = re->searchAll(subject);
         }
         else {
-            re->searchAll2(subject, debuginfo);
+            retval = re->searchAll2(subject);
         }
         clock_t m_end = clock();
         m_sub = (m_end - m_start) / double(CLOCKS_PER_SEC);
-        translate_error(re->m_execrc, rcerror);
+        // minimal value of re->m_execrc is 0, this means no match
+        // in this case we have to decrease the valur for the correct message
+        rc = re->m_execrc;
+        if (rc == 0) {
+            rc = -1;
+        }
+        translate_error(rc, rcerror);
+        debugvalue(debuglevel, std::string("RESULT"), std::string(""));
         std::cout << patternfile << " - time elapsed: " << std::fixed << std::setfill('0') << std::setw(6) << m_sub << ", match value: " << rcerror << std::endl;
     }
+
+    // show captured substrings if debug was set
+    if (debuglevel == 1) {
+        debugvalue(debuglevel, "CAPTURES", "");
+        retval.reverse();
+        for(auto s: retval) {
+            std::string subpatt = "";
+            if (s.offset() > 0) {
+                subpatt += subject.substr(0, s.offset());
+            }
+            subpatt += BOLDGREEN + s.str() + RESET;
+            if (s.offset() + s.str().size() < subject.size()) {
+                subpatt += subject.substr(s.offset() + s.str().size());
+            }
+            std::cout << subpatt << std::endl;
+        }
+
+        debugvalue(debuglevel, "OVECTOR", "");
+        std::cout << "[";
+        for(int i = 0; i < rc; i++) {
+            std::cout << re->m_ovector[2*i] << ", " << re->m_ovector[2*i+1] << ((i < rc-1) ? ", " : "");
+        }
+        std::cout << "]" << std::endl;
+    }
+    // end debug
 
     if (time_limit > 0.0) {
         if (m_sub > time_limit) {
             return EXIT_FAILURE;
         }
     }
+
+    delete(re);
+
     return EXIT_SUCCESS;
 }
 
