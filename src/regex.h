@@ -49,9 +49,10 @@ class Regex {
     // store pcre_exec return value for caller method
     // note, this also isn't part of original code
     int m_execrc;
+    std::list<SMatch> m_retList;
 
     std::list<SMatch> searchAll(const std::string& s);
-    std::list<SMatch> searchAll2(const std::string& s);
+    int searchAll2(const std::string& s, size_t capturelen);
 };
 
 

@@ -53,6 +53,63 @@ Both versions uses a precompiled value, mod_security2 uses 30, libmodsecurity3 u
 
 These informations are very important to understand, why and how works the tools.
 
+Other notes
+-----------
+
+In my opinion, the libmodsecurity3 `@rx` implementation has some design errors: the `searchAll()` method (which is same here as the original code) always collects the captured substrings from subject - this could be make slower the operator. The other thing is there is no limit: if the subject contains the pattern (for example) 100 times, then it will collects all of them, so this coul be lead to high memory usage (of course it depends on pattern and subject - but the collection will stores only the first 10 matches: from TX.0 to TX.9). Another problem is that this method is used for many other places, not just the `@rx` operator, eg. variables, transformations... Just for the fun, I made an own implementation in this code, you can check it with `-f` argument. This argument works only with `pcre4msc3` tool.
+
+In case of mod_security2, the engine doesn't collects all matches, only the first one.
+
+Here is a small summary, how can you check:
+
+ * create a rule, for eg. in the `REQUEST-901-INITIALIZATION.conf`:
+   ```
+   SecRule ARGS|ARGS_NAMES "@rx (?:is)" \
+     "id:800003,\
+     phase:2,\
+     t:none,\
+     pass,\
+     capture,\
+     msg:'%{TX.0}, %{TX.1}, %{TX.2}, %{TX.3}, %{TX.4}, %{TX.5}, %{TX.6}, %{TX.7}, %{TX.8}, %{TX.9}'"
+
+   ```
+ * send a request to the HTTP server:
+   ```
+   curl -v 'http://localhost/?foo=this%20is%20what%20is%20this
+   ```
+   note, the argument `foo` contains the value 'this is what is this', and the pattern in the rule is 'is'. The number of expected values is 4.
+
+Let's see the logs:
+ * Apache (mod_security2):
+   ```
+   ModSecurity: Warning. Pattern match "(?:is)" at ARGS:foo. [file "/usr/share/modsecurity-crs/rules/REQUEST-901-INITIALIZATION.conf"] [line "456"] [id "800003"] [msg "is, , , , , , , , , "] [hostname "localhost"] [uri "/"] [unique_id "XonUavaOEga8L3onA0ZYBAAAAAA"]
+   ```
+ * Nginx (libmodsecurity3):
+   ```
+   ModSecurity: Warning. Matched "Operator `Rx' with parameter `(?:is)' against variable `ARGS:foo' (Value: `this is what is this' ) [file "/usr/share/modsecurity-crs/rules/REQUEST-901-INITIALIZATION.conf"] [line "447"] [id "800003"] [rev ""] [msg "is, is, is, is, , , , , , "] [data ""] [severity "0"] [ver ""] [maturity "0"] [accuracy "0"] [hostname "0.0.0.0"] [uri "/"] [unique_id "158609110136.080640"] [ref "o2,2o5,2o13,2o18,2v10,20"], client: ::1, server: _, request: "GET /?foo=this%20is%20what%20is%20this HTTP/1.1", host: "localhost"
+   ```
+
+As you can see, the `libmodsecurity3` produces the expected result, `mod_security2` doesn't. If you check the `modsec_debug.log` you can see as I wrote above, `libmodsecurity3` collects all occurrence of matches:
+```
+Added regex subexpression TX.0: is
+Added regex subexpression TX.1: is
+Added regex subexpression TX.2: is
+Added regex subexpression TX.3: is
+Added regex subexpression TX.4: is
+Added regex subexpression TX.5: is
+Added regex subexpression TX.6: is
+Added regex subexpression TX.7: is
+Added regex subexpression TX.8: is
+Added regex subexpression TX.9: is
+Added regex subexpression TX.10: is
+Added regex subexpression TX.11: is
+Added regex subexpression TX.12: is
+```
+but only the first 10 has logged. In case of `mod_security2`, you will see only one line:
+```
+Added regex subexpression to TX.0: is
+```
+
 Requirements
 ============
 
@@ -76,8 +133,8 @@ A quick how to:
 
 ```bash
 echo "this is what is this" > subject.txt
-echo "is" > pattern.txt
-src/pcre4mscm2 pattern.txt subject.txt
+echo "(?:is)" > pattern.txt
+src/pcre4msc2 pattern.txt subject.txt
 pattern.txt - time elapsed: 0.000013, match value: SUBJECT MATCHED 1 TIME
 ```
 
@@ -92,7 +149,7 @@ echo $?
 Now check the elapsed time in the output - that's a very important value. That shows you how long the regex engine runs. You can pass an argument to check that this time below your limit or not. For this, try to run:
 
 ```bash
-src/pcre4mscm2 -t 0.000001 pattern.txt subject.txt
+src/pcre4msc2 -t 0.000001 pattern.txt subject.txt
 pattern.txt - time elapsed: 0.000013, match value: SUBJECT MATCHED 1 TIME
 echo $?
 1
@@ -101,7 +158,7 @@ echo $?
 As you can see, the time limit (argument of `-t`) is 0.000001 second (1 ms), it's less than the running time. If this is greather than your limit, the exit codes will 1. Try it again with a greather value:
 
 ```bash
-src/pcre4mscm2 -t 0.0001 pattern.txt subject.txt
+src/pcre4msc2 -t 0.0001 pattern.txt subject.txt
 pattern.txt - time elapsed: 0.000013, match value: SUBJECT MATCHED 1 TIME
 echo $?
 0
@@ -115,15 +172,16 @@ Extra options
 Based on the [information](#Useful%20information':ignore') above, now let's see the possible options for the tools.
 
  
-| option | parameter needed | meaning         |  pcre4msc2 |    pcre4msc3 |
-|-------:|-----------------:|----------------:|-----------:|-------------:|
-|   `-j` | no               | use jit         |   supports | not supports |
-|   `-s` | no               | ignore study    |   supports | not supports |
-|   `-n` | yes              | number of runs  |   supports |     supports |
-|   `-m` | yes              | mathch limit    |   supports | not supports |
-|   `-r` | yes              | match lim. rec. |   supports | not supports |
-|   `-t` | yes              | exec. time lim. |   supports |     supports |
-|   `-d` | yes              | show debug      |   supports |     supports |
+| option | parameter needed | meaning          |  pcre4msc2 |    pcre4msc3 |
+|-------:|-----------------:|-----------------:|-----------:|-------------:|
+|   `-j` | no               | use jit          |     supports | not supports |
+|   `-s` | no               | ignore study     |     supports | not supports |
+|   `-n` | yes              | number of runs   |     supports |     supports |
+|   `-m` | yes              | mathch limit     |     supports | not supports |
+|   `-r` | yes              | match lim. rec.  |     supports | not supports |
+|   `-t` | yes              | exec. time lim.  |     supports |     supports |
+|   `-d` | no               | show debug       |     supports |     supports |
+|   `-f` | no               | force alt. meth. | not supports |     supports |
 
 and `-h` of course.
 
@@ -187,6 +245,26 @@ src/pcre4msc3 -n 5 path/to/pattern path/to/subject
 ```bash
 src/pcre4msc2 -m 4000 -r 4000 path/to/pattern path/to/subject
 ```
+
+[See the difference between the v2, v2 with JIT, v3, and modified v3 matches algorithm](#diff-between-methods)
+```bash
+echo "this is what is this" > subject.txt
+echo "(?:is)" > pattern.txt
+# v2
+src/pcre4msc2 pattern.txt subject.txt
+pattern.txt - time elapsed: 0.000015, match value: SUBJECT MATCHED 1 TIME
+# v2 with JIT
+src/pcre4msc2 -j pattern.txt subject.txt
+pattern.txt - time elapsed: 0.000007, match value: SUBJECT MATCHED 1 TIME
+# v3 original
+src/pcre4msc3 pattern.txt subject.txt
+pattern.txt - time elapsed: 0.000014, match value: SUBJECT MATCHED 4 TIMES
+# v3 modified
+src/pcre4msc3 -f pattern.txt subject.txt
+pattern.txt - time elapsed: 0.000010, match value: SUBJECT MATCHED 1 TIME
+```
+
+Of course, for a more precision result you have to run the tests with `-n 10`, or with more sophisticated pattern and subject.
 
 **Show the detailed debug with created files above (pattern.txt, subject.txt)***
 ```bash

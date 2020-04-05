@@ -74,7 +74,6 @@ std::list<SMatch> Regex::searchAll(const std::string& s) {
     const std::string tmpString = std::string(s.c_str(), s.size());
     int ovector[OVECCOUNT];
     int rc, offset = 0;
-    int oveccnt = 0;
 
     std::list<SMatch> retList;
 
@@ -97,12 +96,6 @@ std::list<SMatch> Regex::searchAll(const std::string& s) {
                 break;
             }
 
-            if (m_debuglevel == 1) {
-                // collect substring indexes - not part of original code
-                m_ovector[oveccnt++] = ovector[2*i];
-                m_ovector[oveccnt++] = ovector[2*i+1];
-                // END collect substring indexes
-            }
             std::string match = std::string(tmpString, start, len);
             offset = start + len;
             retList.push_front(SMatch(match, start));
@@ -116,37 +109,39 @@ std::list<SMatch> Regex::searchAll(const std::string& s) {
     return retList;
 }
 
-std::list<SMatch> Regex::searchAll2(const std::string& s) {
+int Regex::searchAll2(const std::string& s, size_t capturelen) {
     const char *subject = s.c_str();
     const std::string tmpString = std::string(s.c_str(), s.size());
     int ovector[OVECCOUNT];
     int rc, offset = 0;
 
-    std::list<SMatch> retList;
+    m_execrc = 0;
 
-    rc = pcre_exec(m_pc, m_pce, subject,
-        s.size(), offset, 0, ovector, OVECCOUNT);
+    do {
+        rc = pcre_exec(m_pc, m_pce, subject,
+            s.size(), offset, 0, ovector, OVECCOUNT);
 
-    if (rc > 0) {
-        m_execrc = rc;
-    }
-
-    for (int i = 0; i < rc; i++) {
-        size_t start = ovector[2*i];
-        size_t end = ovector[2*i+1];
-        size_t len = end - start;
-        if (end > s.size()) {
-            rc = 0;
-            break;
+        if (rc > 0) {
+            m_execrc += rc;
         }
-        std::string match = std::string(tmpString, start, len);
-        offset = start + len;
-        retList.push_front(SMatch(match, start));
-        if (len == 0) {
-            rc = 0;
-            break;
-        }
-    }
 
-    return retList;
+        for (int i = 0; i < rc && m_retList.size() < capturelen; i++) {
+            size_t start = ovector[2*i];
+            size_t end = ovector[2*i+1];
+            size_t len = end - start;
+            if (end > s.size()) {
+                rc = 0;
+                break;
+            }
+            std::string match = std::string(tmpString, start, len);
+            offset = start + len;
+            m_retList.push_front(SMatch(match, start));
+            if (len == 0) {
+                rc = 0;
+                break;
+            }
+        }
+    } while (rc > 0 && m_retList.size() < capturelen);
+
+    return ((m_execrc == 0) ? -1 : m_execrc);
 }

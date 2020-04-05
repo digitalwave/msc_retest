@@ -118,16 +118,19 @@ int main(int argc, char ** argv) {
     debugvalue(debuglevel, std::string("SUBJECT"), subject);
 
     re = new Regex(pattern, debuglevel);
-
     std::list<SMatch> retval;
 
     for(int i = 0; i < icnt; i++) {
+
+        re->m_retList.clear();
+
         clock_t m_start = clock();
         if (use_fixed == false) {
             retval = re->searchAll(subject);
         }
         else {
-            retval = re->searchAll2(subject);
+            rc = re->searchAll2(subject, ((debuglevel == 1) ? 10 : 0));
+            retval = re->m_retList;
         }
         clock_t m_end = clock();
         m_sub = (m_end - m_start) / double(CLOCKS_PER_SEC);
@@ -160,8 +163,9 @@ int main(int argc, char ** argv) {
 
         debugvalue(debuglevel, "OVECTOR", "");
         std::cout << "[";
-        for(int i = 0; i < rc; i++) {
-            std::cout << re->m_ovector[2*i] << ", " << re->m_ovector[2*i+1] << ((i < rc-1) ? ", " : "");
+        size_t si = 0;
+        for(auto s: retval) {
+            std::cout << s.offset() << ", " << s.offset() + s.str().size() << ((si++ < retval.size()-1) ? ", " : "");
         }
         std::cout << "]" << std::endl;
     }
