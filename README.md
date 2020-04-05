@@ -89,7 +89,12 @@ Let's see the logs:
    ModSecurity: Warning. Matched "Operator `Rx' with parameter `(?:is)' against variable `ARGS:foo' (Value: `this is what is this' ) [file "/usr/share/modsecurity-crs/rules/REQUEST-901-INITIALIZATION.conf"] [line "447"] [id "800003"] [rev ""] [msg "is, is, is, is, , , , , , "] [data ""] [severity "0"] [ver ""] [maturity "0"] [accuracy "0"] [hostname "0.0.0.0"] [uri "/"] [unique_id "158609110136.080640"] [ref "o2,2o5,2o13,2o18,2v10,20"], client: ::1, server: _, request: "GET /?foo=this%20is%20what%20is%20this HTTP/1.1", host: "localhost"
    ```
 
-As you can see, the `libmodsecurity3` produces the expected result, `mod_security2` doesn't. If you check the `modsec_debug.log` you can see as I wrote above, `libmodsecurity3` collects all occurrence of matches:
+As you can see, the `libmodsecurity3` produces the expected result, `mod_security2` doesn't. Try to increase the number if "is" patterns in your query, eg:
+
+```
+curl -v 'http://localhost/?foo=this%20is%20what%20is%20this%20is%20is%20is...%20is'
+```
+and check the `modsec_debug.log`. As you can see the result is what I described above, `libmodsecurity3` collects all occurrence of matches:
 ```
 Added regex subexpression TX.0: is
 Added regex subexpression TX.1: is
