@@ -12,7 +12,7 @@ void showhelp(char * name) {
     std::cout << "OPTIONS:" << std::endl;
     std::cout << "\t-h\tThis help" << std::endl;
     std::cout << "\t-n N\titerate pcre_regex as Nth times. Default value is 1." << std::endl;
-    std::cout << "\t-f\tForce to use modified regex matching method." << std::endl;
+    std::cout << "\t-f\tForce to use old v3 regex matching method." << std::endl;
     std::cout << "\t-t T\tExpects a float value; if the (last) pcre_exec time is greather than this," << std::endl;
     std::cout << "\t    \tthe exit status of program will non-zero." << std::endl;
     std::cout << "\t-d  \tShow debug information." << std::endl;
@@ -25,7 +25,7 @@ int main(int argc, char ** argv) {
     char * patternfile = NULL, * subjectfile = NULL;
     char c;
     int icnt = 1, rc = 0;
-    bool use_fixed = false;
+    bool use_old = false;
     float time_limit = 0.0;
     double m_sub = 0.0;
     int debuglevel = 0;  // may be later we can use different level...
@@ -41,7 +41,7 @@ int main(int argc, char ** argv) {
                 showhelp(argv[0]);
                 return EXIT_SUCCESS;
             case 'f':
-                use_fixed = true;
+                use_old = true;
                 break;
             case 'n':
                 icnt = atoi(optarg);
@@ -119,18 +119,18 @@ int main(int argc, char ** argv) {
 
     re = new Regex(pattern, debuglevel);
     std::list<SMatch> retval;
+    std::vector<SMatchCapture> captures;
 
     for(int i = 0; i < icnt; i++) {
 
         re->m_retList.clear();
 
         clock_t m_start = clock();
-        if (use_fixed == false) {
-            retval = re->searchAll(subject);
+        if (use_old == false) {
+            re->searchOneMatch(subject, captures);
         }
         else {
-            rc = re->searchAll2(subject, ((debuglevel == 1) ? 10 : 0));
-            retval = re->m_retList;
+            retval = re->searchAll(subject);
         }
         clock_t m_end = clock();
         m_sub = (m_end - m_start) / double(CLOCKS_PER_SEC);
@@ -148,26 +148,51 @@ int main(int argc, char ** argv) {
     // show captured substrings if debug was set
     if (debuglevel == 1) {
         debugvalue(debuglevel, "CAPTURES", "");
-        retval.reverse();
-        for(auto s: retval) {
-            std::string subpatt = "";
-            if (s.offset() > 0) {
-                subpatt += subject.substr(0, s.offset());
+        if (use_old == false) {
+            for (const SMatchCapture& capture : captures) {
+                const std::string capture_substring(subject.substr(capture.m_offset, capture.m_length));
+                std::string subpatt = "";
+                if (capture.m_offset > 0) {
+                    subpatt += subject.substr(0, capture.m_offset);
+                }
+                subpatt += BOLDGREEN + capture_substring + RESET;
+                if (capture.m_offset + capture_substring.size() < subject.size()) {
+                    subpatt += subject.substr(capture.m_offset + capture_substring.size());
+                }
+                std::cout << subpatt << std::endl;
             }
-            subpatt += BOLDGREEN + s.str() + RESET;
-            if (s.offset() + s.str().size() < subject.size()) {
-                subpatt += subject.substr(s.offset() + s.str().size());
-            }
-            std::cout << subpatt << std::endl;
-        }
 
-        debugvalue(debuglevel, "OVECTOR", "");
-        std::cout << "[";
-        size_t si = 0;
-        for(auto s: retval) {
-            std::cout << s.offset() << ", " << s.offset() + s.str().size() << ((si++ < retval.size()-1) ? ", " : "");
+            debugvalue(debuglevel, "OVECTOR", "");
+            std::cout << "[";
+            size_t si = 0;
+            for(auto capture: captures) {
+                const std::string capture_substring(subject.substr(capture.m_offset, capture.m_length));
+                std::cout << capture.m_offset << ", " << capture.m_offset + capture_substring.size() << ((si++ < captures.size()-1) ? ", " : "");
+            }
+            std::cout << "]" << std::endl;
         }
-        std::cout << "]" << std::endl;
+        else {
+            retval.reverse();
+            for(auto s: retval) {
+                std::string subpatt = "";
+                if (s.offset() > 0) {
+                    subpatt += subject.substr(0, s.offset());
+                }
+                subpatt += BOLDGREEN + s.str() + RESET;
+                if (s.offset() + s.str().size() < subject.size()) {
+                    subpatt += subject.substr(s.offset() + s.str().size());
+                }
+                std::cout << subpatt << std::endl;
+            }
+
+            debugvalue(debuglevel, "OVECTOR", "");
+            std::cout << "[";
+            size_t si = 0;
+            for(auto s: retval) {
+                std::cout << s.offset() << ", " << s.offset() + s.str().size() << ((si++ < retval.size()-1) ? ", " : "");
+            }
+            std::cout << "]" << std::endl;
+        }
     }
     // end debug
 

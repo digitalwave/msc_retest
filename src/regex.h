@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string>
 #include <list>
+#include <vector>
 
 #include "regexutils.h"
 
@@ -36,6 +37,17 @@ class SMatch {
     size_t m_offset;
 };
 
+struct SMatchCapture {
+    SMatchCapture(size_t group, size_t offset, size_t length) :
+	m_group(group),
+	m_offset(offset),
+	m_length(length) { }
+
+    size_t m_group; // E.g. 0 = full match; 6 = capture group 6
+    size_t m_offset; // offset of match within the analyzed string
+    size_t m_length;
+};
+
 class Regex {
  public:
     explicit Regex(const std::string& pattern_, int debuglevel);
@@ -52,6 +64,7 @@ class Regex {
     std::list<SMatch> m_retList;
 
     std::list<SMatch> searchAll(const std::string& s);
+    bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const;
     int searchAll2(const std::string& s, size_t capturelen);
 };
 

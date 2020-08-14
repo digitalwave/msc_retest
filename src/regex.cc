@@ -68,6 +68,25 @@ Regex::~Regex() {
     }
 }
 
+bool Regex::searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const {
+    const char *subject = s.c_str();
+    int ovector[OVECCOUNT];
+
+    int rc = pcre_exec(m_pc, m_pce, subject, s.size(), 0, 0, ovector, OVECCOUNT);
+
+    for (int i = 0; i < rc; i++) {
+        size_t start = ovector[2*i];
+        size_t end = ovector[2*i+1];
+        size_t len = end - start;
+        if (end > s.size()) {
+            continue;
+        }
+        SMatchCapture capture(i, start, len);
+        captures.push_back(capture);
+    }
+
+    return (rc > 0);
+}
 
 std::list<SMatch> Regex::searchAll(const std::string& s) {
     const char *subject = s.c_str();
