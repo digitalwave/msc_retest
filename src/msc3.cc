@@ -9,6 +9,9 @@
 
 void showhelp(char * name) {
     std::cout << "Use: " << name << " [OPTIONS] patternfile subjectfile" << std::endl;
+    std::cout << std::endl;
+    std::cout << "You can pass subject through stdin, just give the '-' as subjectfile or leave it" << std::endl;
+    std::cout << std::endl;
     std::cout << "OPTIONS:" << std::endl;
     std::cout << "\t-h\tThis help" << std::endl;
     std::cout << "\t-n N\titerate pcre_regex as Nth times. Default value is 1." << std::endl;
@@ -29,8 +32,9 @@ int main(int argc, char ** argv) {
     float time_limit = 0.0;
     double m_sub = 0.0;
     int debuglevel = 0;  // may be later we can use different level...
+    char stdinname[] = "-";
 
-    if (argc < 3) {
+    if (argc < 2) {
       showhelp(argv[0]);
       return EXIT_FAILURE;
     }
@@ -87,7 +91,11 @@ int main(int argc, char ** argv) {
         }
     }
 
-    if (patternfile == NULL || subjectfile == NULL) {
+    if (subjectfile == NULL) {
+        subjectfile = stdinname;
+    }
+
+    if (patternfile == NULL) {
         showhelp(argv[0]);
         return EXIT_FAILURE;
     }
@@ -104,15 +112,22 @@ int main(int argc, char ** argv) {
 
     debugvalue(debuglevel, std::string("PATTERN"), pattern);
 
-    // read subject
-    std::ifstream subjf(subjectfile);
     std::string subject;
-    if (subjf) {
-        subject.assign((std::istreambuf_iterator<char>(subjf)),
-                              (std::istreambuf_iterator<char>()));
+    // read subject
+    //   if filename was given
+    if (strcmp(subjectfile, "-") != 0) {
+        std::ifstream subjf(subjectfile);
+        if (subjf) {
+            subject.assign((std::istreambuf_iterator<char>(subjf)),
+                                (std::istreambuf_iterator<char>()));
+        }
+        else {
+            std::cout << "Can't open file: " << subjectfile << std::endl;
+        }
     }
+    //   or read from stdin
     else {
-        std::cout << "Can't open file: " << subjectfile << std::endl;
+        std::getline(std::cin, subject);
     }
 
     debugvalue(debuglevel, std::string("SUBJECT"), subject);
@@ -128,15 +143,16 @@ int main(int argc, char ** argv) {
         clock_t m_start = clock();
         if (use_old == false) {
             re->searchOneMatch(subject, captures);
+            rc = captures.size();
         }
         else {
             retval = re->searchAll(subject);
+            rc = retval.size();
         }
         clock_t m_end = clock();
         m_sub = (m_end - m_start) / double(CLOCKS_PER_SEC);
         // minimal value of re->m_execrc is 0, this means no match
         // in this case we have to decrease the valur for the correct message
-        rc = re->m_execrc;
         if (rc == 0) {
             rc = -1;
         }

@@ -18,7 +18,8 @@
 #define FILESIZEMAX 131072
 
 void showhelp(char * name) {
-    printf("Use: %s [OPTIONS] patternfile subjectfile\n", name);
+    printf("Use: %s [OPTIONS] patternfile subjectfile\n\n", name);
+    printf("You can pass subject through stdin, just give the '-' as subjectfile or leave it.\n\n");
     printf("OPTIONS:\n");
     printf("\t-h\tThis help\n");
 #ifdef PCRE_CONFIG_JIT
@@ -145,6 +146,7 @@ int main(int argc, char **argv) {
     int match_limit_recursion = 1000;
     float time_limit = 0.0;
     int debuglevel = 0;
+    char stdinname[] = "-";
 
     FILE *fp;
     const char * patternfile = NULL, * subjectfile = NULL;
@@ -153,7 +155,7 @@ int main(int argc, char **argv) {
     tval_result.tv_sec = 0;
     tval_result.tv_usec = 0;
 
-    if (argc < 3) {
+    if (argc < 2) {
       showhelp(argv[0]);
       return EXIT_FAILURE;
     }
@@ -231,7 +233,11 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (patternfile == NULL || subjectfile == NULL) {
+    if (subjectfile == NULL) {
+        subjectfile = stdinname;
+    }
+
+    if (patternfile == NULL) {
         showhelp(argv[0]);
         return EXIT_FAILURE;
     }
@@ -259,17 +265,28 @@ int main(int argc, char **argv) {
     escaped_pattern = strip_slashes(pattern, strlen(pattern));
 
     // read subject
-    fp = fopen(subjectfile, "r");
-    if (fp == NULL) {
-        fprintf(stderr, "Can't open file: %s\n", subjectfile);
-        return EXIT_FAILURE;
+    //   if filename was given
+    if (strcmp(subjectfile, "-") != 0) {
+        fp = fopen(subjectfile, "r");
+        if (fp == NULL) {
+            fprintf(stderr, "Can't open file: %s\n", subjectfile);
+            return EXIT_FAILURE;
+        }
+        i = 0;
+        while ((ci = fgetc(fp)) != EOF && i < FILESIZEMAX) {
+            subject[i++] = ci;
+        }
+        subject_length = (int)strlen(subject);
+        fclose(fp);
     }
-    i = 0;
-    while ((ci = fgetc(fp)) != EOF && i < FILESIZEMAX) {
-        subject[i++] = ci;
+    //   or read from stdin
+    else {
+        i = 0;
+        while ((ci = getchar()) != '\n' && ci != EOF && i < FILESIZEMAX) {
+            subject[i++] = ci;
+        }
+        subject_length = (int)strlen(subject);
     }
-    subject_length = (int)strlen(subject);
-    fclose(fp);
     if (i == FILESIZEMAX && ci != EOF) {
         fprintf (stderr, "File too long: %s\n", subjectfile);
         return EXIT_FAILURE;

@@ -1,11 +1,22 @@
-# msc_pcretest
+# msc_retest
 
-Welcome to the `msc_pcretest` documentation.
+Welcome to the `msc_retest` documentation.
 
 Description
 ===========
 
-This tool compiles two binaries: `pcre4msc2` and `pcre4msc3`. The binaries emulates the behaviors of regex engine (PCRE - the old version) in mod_security2 (Apache module) and the libmodsecurity3. With this programs, you can check the evaulation time and result of every regular expressions with any random (including very extreme long) input. Both of them (regex pattern, input subject) needs to exists in two separated files, and you can pass them as argument.
+This tool compiles two binaries: `pcre4msc2` and `pcre4msc3`. The binaries emulates the behaviors of regex engine (PCRE - the old version) in mod_security2 (Apache module) and the libmodsecurity3. With this programs, you can check the evaulation time and result of every regular expressions with any random (including very extreme long) input. Both of them (regex pattern, input subject) needs to exists in two separated files, and you can pass them as argument. Subject can be passed through stdin, if you give '-' for subjectfile, eg:
+
+```bash
+echo "arg=../../../etc/passwd&foo=var" | src/pcre4msc2 data/930110_1.txt -
+data/930110_1.txt - time elapsed: 0.000012, match value: SUBJECT MATCHED 1 TIME
+```
+or just simple leave it:
+
+```bash
+echo "arg=../../../etc/passwd&foo=var" | src/pcre4msc3 data/930110_1.txt
+data/930110_1.txt - time elapsed: 0.000006, match value: SUBJECT MATCHED 1 TIME
+```
 
 The source tree contains some extra directories: under the `data/` you can find all of the regular expressions, what CRS uses. The files contains the id of the rule, and a suffix (there are some chained rules, where more parts uses `@rx`).
 
@@ -53,10 +64,10 @@ Both versions uses a precompiled value, mod_security2 uses 30, libmodsecurity3 u
 
 These informations are very important to understand, why and how works the tools.
 
-Other notes
------------
+Other notes - outdated
+----------------------
 
-In my opinion, the libmodsecurity3 `@rx` implementation has some design errors: the `searchAll()` method (which is same here as the original code) always collects the captured substrings from subject - this could be make slower the operator. The other thing is there is no limit: if the subject contains the pattern (for example) 100 times, then it will collects all of them, so this coul be lead to high memory usage (of course it depends on pattern and subject - but the collection will stores only the first 10 matches: from TX.0 to TX.9). Another problem is that this method is used for many other places, not just the `@rx` operator, eg. variables, transformations... Just for the fun, I made an own implementation in this code, you can check it with `-f` argument. This argument works only with `pcre4msc3` tool.
+The libmodsecurity3 `@rx` implementation had some design errors (which are now [fixed](https://github.com/SpiderLabs/ModSecurity/pull/2348)): the `searchAll()` method (which is same here as the original code) always collected the captured substrings from subject - this could be make slower the operator. The another thing was there was no limit: if the subject contained the pattern (for example) 100 times, then it collected all of them, so this could be lead to high memory usage (of course it depends on pattern and subject - but the collection will stores only the first 10 matches: from TX.0 to TX.9). Another problem was that this method was used for many other places, not just the `@rx` operator, eg. variables, transformations... `pcre4msc3` contains the fixed version, but you can allow the old method with `-f` argument. This argument works only with `pcre4msc3` tool.
 
 In case of mod_security2, the engine doesn't collects all matches, only the first one.
 
@@ -84,17 +95,17 @@ Let's see the logs:
    ```
    ModSecurity: Warning. Pattern match "(?:is)" at ARGS:foo. [file "/usr/share/modsecurity-crs/rules/REQUEST-901-INITIALIZATION.conf"] [line "456"] [id "800003"] [msg "is, , , , , , , , , "] [hostname "localhost"] [uri "/"] [unique_id "XonUavaOEga8L3onA0ZYBAAAAAA"]
    ```
- * Nginx (libmodsecurity3):
+ * Nginx (libmodsecurity3 - before the [fix](https://github.com/SpiderLabs/ModSecurity/pull/2348)):
    ```
    ModSecurity: Warning. Matched "Operator `Rx' with parameter `(?:is)' against variable `ARGS:foo' (Value: `this is what is this' ) [file "/usr/share/modsecurity-crs/rules/REQUEST-901-INITIALIZATION.conf"] [line "447"] [id "800003"] [rev ""] [msg "is, is, is, is, , , , , , "] [data ""] [severity "0"] [ver ""] [maturity "0"] [accuracy "0"] [hostname "0.0.0.0"] [uri "/"] [unique_id "158609110136.080640"] [ref "o2,2o5,2o13,2o18,2v10,20"], client: ::1, server: _, request: "GET /?foo=this%20is%20what%20is%20this HTTP/1.1", host: "localhost"
    ```
 
-As you can see, the `libmodsecurity3` produces the expected result, `mod_security2` doesn't. Try to increase the number if "is" patterns in your query, eg:
+As you can see, the `libmodsecurity3` produced the expected result, `mod_security2` doesn't. Try to increase the number if "is" patterns in your query, eg:
 
 ```
 curl -v 'http://localhost/?foo=this%20is%20what%20is%20this%20is%20is%20is...%20is'
 ```
-and check the `modsec_debug.log`. As you can see the result is what I described above, `libmodsecurity3` collects all occurrence of matches:
+and check the `modsec_debug.log`. As you can see the result is what I described above, `libmodsecurity3` old version collects all occurrence of matches:
 ```
 Added regex subexpression TX.0: is
 Added regex subexpression TX.1: is
