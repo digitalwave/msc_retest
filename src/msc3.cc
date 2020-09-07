@@ -142,6 +142,7 @@ int main(int argc, char ** argv) {
 
         clock_t m_start = clock();
         if (use_old == false) {
+            captures.clear();
             re->searchOneMatch(subject, captures);
             rc = captures.size();
         }
