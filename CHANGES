@@ -1,5 +1,9 @@
 v0.4 - YYYY-MM-dd
 -----------------
+  * Spelling fixes
+  * Moved data/ dir to regexes/
+  * Increased the -n max value (INT_MAX)
+  * Clear the list before exec (in case v3)
 
 v0.3 - 2020-09-02
 -----------------
