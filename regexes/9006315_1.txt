@@ -1,0 +1,1 @@
+/account-confirmation/.*\.\d+/email$
