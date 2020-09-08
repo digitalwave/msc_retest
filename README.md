@@ -171,7 +171,7 @@ echo $?
 1
 ```
 
-As you can see, the time limit (argument of `-t`) is 0.000001 second (1 ms), it's less than the running time. If this is greather than your limit, the exit codes will 1. Try it again with a greather value:
+As you can see, the time limit (argument of `-t`) is 0.000001 second (1 ms), it's less than the running time. If this is greater than your limit, the exit codes will 1. Try it again with a greater value:
 
 ```bash
 src/pcre4msc2 -t 0.0001 pattern.txt subject.txt

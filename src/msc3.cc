@@ -16,7 +16,7 @@ void showhelp(char * name) {
     std::cout << "\t-h\tThis help" << std::endl;
     std::cout << "\t-n N\titerate pcre_regex as Nth times. Default value is 1." << std::endl;
     std::cout << "\t-f\tForce to use old v3 regex matching method." << std::endl;
-    std::cout << "\t-t T\tExpects a float value; if the (last) pcre_exec time is greather than this," << std::endl;
+    std::cout << "\t-t T\tExpects a float value; if the (last) pcre_exec time is greater than this," << std::endl;
     std::cout << "\t    \tthe exit status of program will non-zero." << std::endl;
     std::cout << "\t-d  \tShow debug information." << std::endl;
     std::cout << std::endl;

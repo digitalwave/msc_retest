@@ -33,7 +33,7 @@ void showhelp(char * name) {
 #ifdef PCRE_EXTRA_MATCH_LIMIT_RECURSION
     printf("\t-r R\tSet value R for the pcre_match_limit_recursion for pcre_extra. Default value is 1000.\n");
 #endif
-    printf("\t-t T\tExpects a float value; if the (last) pcre_exec time is greather than this,\n");
+    printf("\t-t T\tExpects a float value; if the (last) pcre_exec time is greater than this,\n");
     printf("\t    \tthe exit status of program will non-zero.\n");
     printf("\t-d  \tShow debug information.\n");
     printf("\n");
