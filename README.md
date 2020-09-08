@@ -8,14 +8,14 @@ Description
 This tool compiles two binaries: `pcre4msc2` and `pcre4msc3`. The binaries emulates the behaviors of regex engine (PCRE - the old version) in mod_security2 (Apache module) and the libmodsecurity3. With this programs, you can check the evaulation time and result of every regular expressions with any random (including very extreme long) input. Both of them (regex pattern, input subject) needs to exists in two separated files, and you can pass them as argument. Subject can be passed through stdin, if you give '-' for subjectfile, eg:
 
 ```bash
-echo "arg=../../../etc/passwd&foo=var" | src/pcre4msc2 data/930110_1.txt -
-data/930110_1.txt - time elapsed: 0.000012, match value: SUBJECT MATCHED 1 TIME
+echo "arg=../../../etc/passwd&foo=var" | src/pcre4msc2 regexes/930110_1.txt -
+regexes/930110_1.txt - time elapsed: 0.000012, match value: SUBJECT MATCHED 1 TIME
 ```
 or just simple leave it:
 
 ```bash
-echo "arg=../../../etc/passwd&foo=var" | src/pcre4msc3 data/930110_1.txt
-data/930110_1.txt - time elapsed: 0.000006, match value: SUBJECT MATCHED 1 TIME
+echo "arg=../../../etc/passwd&foo=var" | src/pcre4msc3 regexes/930110_1.txt
+regexes/930110_1.txt - time elapsed: 0.000006, match value: SUBJECT MATCHED 1 TIME
 ```
 
 The source tree contains some extra directories: under the `data/` you can find all of the regular expressions, what CRS uses. The files contains the id of the rule, and a suffix (there are some chained rules, where more parts uses `@rx`).
@@ -211,43 +211,43 @@ Here are some examples:
 **Run a tests with all used regular expression with a pattern.**
 
 ```bash
-for d in `ls -1 data/9*.txt`; do src/pcre4msc2 ${d} /path/to/subject.txt; done
+for d in `ls -1 regexes/9*.txt`; do src/pcre4msc2 ${d} /path/to/subject.txt; done
 ```
 
 **Same test but filter the rules with extra long times.**
 
 ```bash
-for d in `ls -1 data/9*.txt`; do src/pcre4msc2 ${d} /path/to/subject.txt; done | grep "\([1-9][0-9]\|[1-9]\)\.[0-9]"
+for d in `ls -1 regexes/9*.txt`; do src/pcre4msc2 ${d} /path/to/subject.txt; done | grep "\([1-9][0-9]\|[1-9]\)\.[0-9]"
 ```
 
 **Same tests but run it for libmodsecurity3 'engine'.**
 
 ```bash
-for d in `ls -1 data/9*.txt`; do src/pcre4msc3 ${d} /path/to/subject.txt; done
+for d in `ls -1 regexes/9*.txt`; do src/pcre4msc3 ${d} /path/to/subject.txt; done
 ```
 
 **Use the filter here too.**
 
 ```bash
-for d in `ls -1 data/9*.txt`; do src/pcre4msc3 ${d} /path/to/subject.txt; done | grep "\([1-9][0-9]\|[1-9]\)\.[0-9]"
+for d in `ls -1 regexes/9*.txt`; do src/pcre4msc3 ${d} /path/to/subject.txt; done | grep "\([1-9][0-9]\|[1-9]\)\.[0-9]"
 ```
 
 **Collect regexes where the runtime over your limit (0.00001 sec)**
 
 ```bash
-for d in `ls -1 data/9*.txt`; do src/pcre4msc2 -t 0.00001 -j ${d} /path/to/subject.txt; if [ $? -ne 0 ]; then echo "Time limit exceeded: ${d}"; fi; done | grep "Time limit"
+for d in `ls -1 regexes/9*.txt`; do src/pcre4msc2 -t 0.00001 -j ${d} /path/to/subject.txt; if [ $? -ne 0 ]; then echo "Time limit exceeded: ${d}"; fi; done | grep "Time limit"
 ```
 
 **Same tests but use JIT.**
 
 ```bash
-for d in `ls -1 data/9*.txt`; do src/pcre4msc2 -j ${d} /path/to/subject.txt; done
+for d in `ls -1 regexes/9*.txt`; do src/pcre4msc2 -j ${d} /path/to/subject.txt; done
 ```
 
 **Check again and compare the long times with 2nd exampe.**
 
 ```bash
-for d in `ls -1 data/9*.txt`; do src/pcre4msc2 -j ${d} /path/to/subject.txt; done | grep "\([1-9][0-9]\|[1-9]\)\.[0-9]"
+for d in `ls -1 regexes/9*.txt`; do src/pcre4msc2 -j ${d} /path/to/subject.txt; done | grep "\([1-9][0-9]\|[1-9]\)\.[0-9]"
 ```
 
 Note, see the difference in case of some patterns - it's awesome performance increase.
@@ -333,7 +333,7 @@ where the firs is printed with green color.
 **Show the details with pattern what contains escape***
 ```bash
 echo "\"//onerror=\"" > subject2.txt
-src/pcre4msc2 -d data/941120_1.txt subject2.txt
+src/pcre4msc2 -d regexes/941120_1.txt subject2.txt
 
 RAW pattern:
 ============
@@ -365,7 +365,7 @@ MATCH LIMIT RECURSION:
 
 RESULT:
 =======
-data/941120_1.txt - time elapsed: 0.000015, match value: SUBJECT MATCHED 1 TIME
+regexes/941120_1.txt - time elapsed: 0.000015, match value: SUBJECT MATCHED 1 TIME
 
 CAPTURES:
 =========
