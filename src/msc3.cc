@@ -4,6 +4,7 @@
 #include <fstream>
 #include <unistd.h>
 #include <ctype.h>
+#include <bits/stdc++.h>
 #include "regex.h"
 #include "regexutils.h"
 
@@ -15,10 +16,10 @@ void showhelp(char * name) {
     std::cout << "OPTIONS:" << std::endl;
     std::cout << "\t-h\tThis help" << std::endl;
     std::cout << "\t-n N\titerate pcre_regex as Nth times. Default value is 1." << std::endl;
-    std::cout << "\t-f\tForce to use old v3 regex matching method." << std::endl;
+    std::cout << "\t-f\tForce to use old modsec v3 regex matching method." << std::endl;
     std::cout << "\t-t T\tExpects a float value; if the (last) pcre_exec time is greater than this," << std::endl;
     std::cout << "\t    \tthe exit status of program will non-zero." << std::endl;
-    std::cout << "\t-d  \tShow debug information." << std::endl;
+    std::cout << "\t-d  \tShow detailed information." << std::endl;
     std::cout << std::endl;
 }
 
@@ -49,8 +50,8 @@ int main(int argc, char ** argv) {
                 break;
             case 'n':
                 icnt = atoi(optarg);
-                if (icnt <= 0 || icnt > 10) {
-                    std::cerr << "Ohh... Try to pass for '-n' an integer between 1 and 10" << std::endl;
+                if (icnt <= 0 || icnt > INT_MAX) {
+                    std::cerr << "Ohh... Try to pass for '-n' an integer between 1 and " << INT_MAX << std::endl;
                     return EXIT_FAILURE;
                 }
                 break;

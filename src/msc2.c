@@ -12,6 +12,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <limits.h>
 #include "regexutils.h"
 
 #define OVECCOUNT 30    /* should be a multiple of 3 */
@@ -35,7 +36,7 @@ void showhelp(char * name) {
 #endif
     printf("\t-t T\tExpects a float value; if the (last) pcre_exec time is greater than this,\n");
     printf("\t    \tthe exit status of program will non-zero.\n");
-    printf("\t-d  \tShow debug information.\n");
+    printf("\t-d  \tShow detailed information.\n");
     printf("\n");
 }
 
@@ -191,8 +192,8 @@ int main(int argc, char **argv) {
                 break;
             case 'n':
                 icnt = atoi(optarg);
-                if (icnt <= 0 || icnt > 10) {
-                    fprintf(stderr, "Ohh... Try to pass for '-n' an integer between 1 and 10\n");
+                if (icnt <= 0 || icnt > INT_MAX) {
+                    fprintf(stderr, "Ohh... Try to pass for '-n' an integer between 1 and %d\n", INT_MAX);
                     return EXIT_FAILURE;
                 }
                 break;

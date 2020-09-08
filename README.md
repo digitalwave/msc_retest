@@ -190,14 +190,14 @@ Based on the [information](#Useful%20information':ignore') above, now let's see 
  
 | option | parameter needed | meaning          |  pcre4msc2 |    pcre4msc3 |
 |-------:|-----------------:|-----------------:|-----------:|-------------:|
-|   `-j` | no               | use jit          |     supports | not supports |
-|   `-s` | no               | ignore study     |     supports | not supports |
-|   `-n` | yes              | number of runs   |     supports |     supports |
-|   `-m` | yes              | mathch limit     |     supports | not supports |
-|   `-r` | yes              | match lim. rec.  |     supports | not supports |
-|   `-t` | yes              | exec. time lim.  |     supports |     supports |
-|   `-d` | no               | show debug       |     supports |     supports |
-|   `-f` | no               | force alt. meth. | not supports |     supports |
+|   `-j` | no               | use jit          |     supported | not supported |
+|   `-s` | no               | ignore study     |     supported | not supported |
+|   `-n` | yes              | number of runs   |     supported |     supported |
+|   `-m` | yes              | mathch limit     |     supported | not supported |
+|   `-r` | yes              | match lim. rec.  |     supported | not supported |
+|   `-t` | yes              | exec. time lim.  |     supported |     supported |
+|   `-d` | no               | show details     |     supported |     supported |
+|   `-f` | no               | force alt. meth. | not supported |     supported |
 
 and `-h` of course.
 
@@ -262,7 +262,7 @@ src/pcre4msc3 -n 5 path/to/pattern path/to/subject
 src/pcre4msc2 -m 4000 -r 4000 path/to/pattern path/to/subject
 ```
 
-[See the difference between the v2, v2 with JIT, v3, and modified v3 matches algorithm](#diff-between-methods)
+[See the difference between the modsec_v2 **without** JIT, modsec v2 **with** JIT, modsec v3, and old modsec v3 matches algorithm](#diff-between-methods)
 ```bash
 echo "this is what is this" > subject.txt
 echo "(?:is)" > pattern.txt
@@ -282,7 +282,7 @@ pattern.txt - time elapsed: 0.000010, match value: SUBJECT MATCHED 1 TIME
 
 Of course, for a more precision result you have to run the tests with `-n 10`, or with more sophisticated pattern and subject.
 
-**Show the detailed debug with created files above (pattern.txt, subject.txt)***
+**Show the details with created files above (pattern.txt, subject.txt)***
 ```bash
 src/pcre4msc2 -d pattern.txt subject.txt
 
@@ -330,7 +330,7 @@ OVECTOR:
 
 where the firs is printed with green color.
 
-**Show the detailed debug with pattern what contains escape***
+**Show the details with pattern what contains escape***
 ```bash
 echo "\"//onerror=\"" > subject2.txt
 src/pcre4msc2 -d data/941120_1.txt subject2.txt
@@ -417,4 +417,4 @@ As you can see, the ModSecurity3 pattern matching code founds the all occurance 
 
 See the screenshot:
 
-![Detailed debug](images/detailed_debug.png)
+![Details](images/detailed_debug.png)
