@@ -151,10 +151,18 @@ int main(int argc, char **argv) {
 
     FILE *fp;
     const char * patternfile = NULL, * subjectfile = NULL;
-    struct timeval tval_before, tval_after, tval_result;
+    //struct timeval tval_before, tval_after, tval_result;
+    struct timespec ts_before, ts_after, ts_diff;
+    long double *ld_diffs = NULL;
+    long double ld_minval, ld_maxval;
+    long double ld_sums, ld_mean, ld_med;
 
-    tval_result.tv_sec = 0;
-    tval_result.tv_usec = 0;
+    //tval_result.tv_sec = 0;
+    //tval_result.tv_usec = 0;
+    ld_sums         = 0.0;
+    ld_med          = 0.0;
+    ld_minval       = 0.0;
+    ld_maxval       = 0.0;
 
     if (argc < 2) {
       showhelp(argv[0]);
@@ -241,6 +249,14 @@ int main(int argc, char **argv) {
     if (patternfile == NULL) {
         showhelp(argv[0]);
         return EXIT_FAILURE;
+    }
+
+    if (icnt > 1) {
+        ld_diffs = calloc(icnt, sizeof(long double));
+        if (ld_diffs == NULL) {
+            fprintf(stderr, "Can't allocate memory for time diff array\n");
+            return EXIT_FAILURE;
+        }
     }
 
     // read pattern
@@ -370,7 +386,11 @@ int main(int argc, char **argv) {
     rc = 0; // initialize for debug level...
 
     for(i=0; i<icnt; i++) {
-        gettimeofday(&tval_before, NULL);
+        ts_diff.tv_sec  = 0;
+        ts_diff.tv_nsec = 0;
+
+        //gettimeofday(&tval_before, NULL);
+        clock_gettime(CLOCK_REALTIME, &ts_before);
         rc = pcre_exec(
             re,                   /* the compiled pattern */
             pce,                  /* no extra data - we didn't study the pattern */
@@ -381,11 +401,51 @@ int main(int argc, char **argv) {
             ovector,              /* output vector for substring information */
             OVECCOUNT             /* number of elements in the output vector */
         );
-        gettimeofday(&tval_after, NULL);
-        timersub(&tval_after, &tval_before, &tval_result);
+        //gettimeofday(&tval_after, NULL);
+        clock_gettime(CLOCK_REALTIME, &ts_after);
+        //timersub(&tval_after, &tval_before, &tval_result);
+        timespec_diff(&ts_after, &ts_before, &ts_diff);
         translate_error(rc, rcerror);
         debuglabel(debuglevel, "RESULT");
-        printf("%s - time elapsed: %ld.%06ld, match value: %s\n", patternfile, (long int)tval_result.tv_sec, (long int)tval_result.tv_usec, rcerror);
+        // printf("%s - time elapsed: %ld.%06ld, match value: %s\n", patternfile, (long int)tval_result.tv_sec, (long int)tval_result.tv_usec, rcerror);
+        printf("%s - time elapsed: %ld.%09ld, match value: %s\n", patternfile, (long int)ts_diff.tv_sec, (long int)ts_diff.tv_nsec, rcerror);
+        if (icnt > 1) {
+            ld_diffs[i] = ts_diff.tv_sec + (ts_diff.tv_nsec/1000000000.0);
+
+            ld_sums += ld_diffs[i];
+            // set minval
+            if (i == 0 || ld_diffs[i] < ld_minval) {
+                ld_minval = ld_diffs[i];
+            }
+            // set maxval
+            if (ld_diffs[i] > ld_maxval) {
+                ld_maxval = ld_diffs[i];
+            }
+        }
+    }
+
+    if (icnt > 1) {
+        ld_mean = ld_sums / (double)icnt;
+
+        qsort(ld_diffs, icnt, sizeof(long double), compare_ld);
+
+        if (icnt%2 == 1) {
+           ld_med = ld_diffs[(icnt/2)+1];
+        }
+        else {
+            long double ldtemp[2];
+            ldtemp[0] = ld_diffs[(icnt/2)];
+            ldtemp[1] = ld_diffs[(icnt/2)+1];
+            ld_med = ldtemp[0] + ((ldtemp[1]-ldtemp[0])/2.0);
+        }
+
+        printf("Num of values: %d\n", icnt);
+        printf("         Mean: %013.9Lf\n", ld_mean);
+        printf("       Median: %013.9Lf\n", ld_med);
+        printf("          Min: %013.9Lf\n", ld_minval);
+        printf("          Max: %013.9Lf\n", ld_maxval);
+        printf("        Range: %013.9Lf\n", ld_maxval - ld_minval);
+        printf("Std deviation: %013.9Lf\n", calc_std_deviation(ld_diffs, icnt, ld_mean));
     }
 
     // show captured substrings - only once
@@ -423,6 +483,10 @@ int main(int argc, char **argv) {
         printf("]\n");
     }
 
+    if (ld_diffs != NULL) {
+        free(ld_diffs);
+    }
+
     pcre_free(re);
     if (pce != NULL) {
         pcre_free(pce);
@@ -432,7 +496,7 @@ int main(int argc, char **argv) {
     }
 
     if (time_limit > 0.0) {
-        if (((double)tval_result.tv_sec + ((double)(tval_result.tv_usec))/1000000.0) > time_limit) {
+        if (((double)ts_diff.tv_sec + ((double)(ts_diff.tv_nsec))/1000000000.0) > time_limit) {
             return EXIT_FAILURE;
         }
     }

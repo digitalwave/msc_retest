@@ -3,6 +3,7 @@
  */
 
 #include "regexutils.h"
+#include <math.h>
 
 #define SETRCERROR(str)  strcpy(rcerror, str); break
 
@@ -52,4 +53,18 @@ void translate_error(int rc, char * rcerror) {
                 sprintf(rcerror, "SUBJECT MATCHED %d TIME%s", rc, ((rc > 1) ? "S" : ""));
             }
     }
+}
+
+int compare_ld (const void * a, const void * b) {
+  if (*(long double*)a > *(long double*)b) return 1;
+  else if (*(long double*)a < *(long double*)b) return -1;
+  else return 0;
+}
+
+long double calc_std_deviation(const long double * arr, const int n, const long double avg) {
+    long double sum = 0.0;
+    for(int i = 0; i < n; i++) {
+        sum += powl(arr[i]-avg, 2.0);
+    }
+    return sqrtl(sum/((long double)n));
 }

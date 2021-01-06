@@ -31,9 +31,19 @@ int main(int argc, char ** argv) {
     int icnt = 1, rc = 0;
     bool use_old = false;
     float time_limit = 0.0;
-    double m_sub = 0.0;
+    // double m_sub = 0.0;
     int debuglevel = 0;  // may be later we can use different level...
     char stdinname[] = "-";
+
+    struct timespec ts_before, ts_after, ts_diff;
+    std::vector<long double> ld_diffs;
+    long double ld_minval, ld_maxval;
+    long double ld_sums, ld_mean, ld_med;
+
+    ld_sums         = 0.0;
+    ld_med          = 0.0;
+    ld_minval       = 0.0;
+    ld_maxval       = 0.0;
 
     if (argc < 2) {
       showhelp(argv[0]);
@@ -141,7 +151,10 @@ int main(int argc, char ** argv) {
 
         re->m_retList.clear();
 
-        clock_t m_start = clock();
+        ts_diff.tv_sec  = 0;
+        ts_diff.tv_nsec = 0;
+
+        clock_gettime(CLOCK_REALTIME, &ts_before);
         if (use_old == false) {
             captures.clear();
             re->searchOneMatch(subject, captures);
@@ -151,8 +164,8 @@ int main(int argc, char ** argv) {
             retval = re->searchAll(subject);
             rc = retval.size();
         }
-        clock_t m_end = clock();
-        m_sub = (m_end - m_start) / double(CLOCKS_PER_SEC);
+        clock_gettime(CLOCK_REALTIME, &ts_after);
+        timespec_diff(&ts_after, &ts_before, &ts_diff);
         // minimal value of re->m_execrc is 0, this means no match
         // in this case we have to decrease the valur for the correct message
         if (rc == 0) {
@@ -160,7 +173,45 @@ int main(int argc, char ** argv) {
         }
         translate_error(rc, rcerror);
         debugvalue(debuglevel, std::string("RESULT"), std::string(""));
-        std::cout << patternfile << " - time elapsed: " << std::fixed << std::setfill('0') << std::setw(6) << m_sub << ", match value: " << rcerror << std::endl;
+        // std::cout << patternfile << " - time elapsed: " << std::fixed << std::setfill('0') << std::setw(6) << m_sub << ", match value: " << rcerror << std::endl;
+        std::cout << patternfile << " - time elapsed: " << ts_diff.tv_sec << "." << std::fixed << std::setfill('0') << std::setw(9) << ts_diff.tv_nsec << ", match value: " << rcerror << std::endl;
+        if (icnt > 1) {
+            ld_diffs.push_back(ts_diff.tv_sec + (ts_diff.tv_nsec/1000000000.0));
+
+            ld_sums += ld_diffs[i];
+            // set minval
+            if (i == 0 || ld_diffs[i] < ld_minval) {
+                ld_minval = ld_diffs[i];
+            }
+            // set maxval
+            if (ld_diffs[i] > ld_maxval) {
+                ld_maxval = ld_diffs[i];
+            }
+        }
+    }
+
+    if (icnt > 1) {
+        ld_mean = ld_sums / (double)icnt;
+
+        qsort(&ld_diffs[0], icnt, sizeof(long double), compare_ld);
+
+        if (icnt%2 == 1) {
+           ld_med = ld_diffs[(icnt/2)+1];
+        }
+        else {
+            long double ldtemp[2];
+            ldtemp[0] = ld_diffs[(icnt/2)];
+            ldtemp[1] = ld_diffs[(icnt/2)+1];
+            ld_med = ldtemp[0] + ((ldtemp[1]-ldtemp[0])/2.0);
+        }
+
+        printf("Num of values: %d\n", icnt);
+        printf("         Mean: %013.9Lf\n", ld_mean);
+        printf("       Median: %013.9Lf\n", ld_med);
+        printf("          Min: %013.9Lf\n", ld_minval);
+        printf("          Max: %013.9Lf\n", ld_maxval);
+        printf("        Range: %013.9Lf\n", ld_maxval - ld_minval);
+        printf("Std deviation: %013.9Lf\n", calc_std_deviation(&ld_diffs[0], icnt, ld_mean));
     }
 
     // show captured substrings if debug was set
@@ -215,7 +266,7 @@ int main(int argc, char ** argv) {
     // end debug
 
     if (time_limit > 0.0) {
-        if (m_sub > time_limit) {
+        if (((double)ts_diff.tv_sec + ((double)(ts_diff.tv_nsec))/1000000000.0) > time_limit) {
             return EXIT_FAILURE;
         }
     }
