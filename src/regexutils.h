@@ -16,10 +16,12 @@
 extern "C" void translate_error(int, char *);
 extern "C" int compare_ld (const void *, const void *);
 extern "C" long double calc_std_deviation(const long double *, const int, const long double);
+extern "C" void show_stat(long double *, int);
 #else
 void translate_error(int, char *);
 int compare_ld (const void *, const void *);
 long double calc_std_deviation(const long double *, const int, const long double);
+void show_stat(long double *, int);
 #endif
 
 #include <time.h>

@@ -68,3 +68,50 @@ long double calc_std_deviation(const long double * arr, const int n, const long 
     }
     return sqrtl(sum/((long double)n));
 }
+
+void show_stat(long double * ld_diffs, int icnt) {
+
+    if (icnt == 0) {
+        return;
+    }
+
+    double long ld_mean = 0.0, ld_med = 0.0, ld_sums = 0.0;
+    double long ld_minval = 0.0, ld_maxval = 0.0;
+
+#ifdef __cplusplus
+    qsort(&ld_diffs[0], icnt, sizeof(long double), compare_ld);
+#else
+    qsort(ld_diffs, icnt, sizeof(long double), compare_ld);
+#endif
+
+    ld_minval = ld_diffs[0];
+    ld_maxval = ld_diffs[icnt-1];
+
+    for(int i = 0; i < icnt; i++) {
+        ld_sums += ld_diffs[i];
+    }
+
+    ld_mean = ld_sums / (double)icnt;
+
+    if (icnt%2 == 1) {
+        ld_med = ld_diffs[(icnt/2)+1];
+    }
+    else {
+        long double ldtemp[2];
+        ldtemp[0] = ld_diffs[(icnt/2)];
+        ldtemp[1] = ld_diffs[(icnt/2)+1];
+        ld_med = ldtemp[0] + ((ldtemp[1]-ldtemp[0])/2.0);
+    }
+
+    printf("Num of values: %d\n", icnt);
+    printf("         Mean: %013.9Lf\n", ld_mean);
+    printf("       Median: %013.9Lf\n", ld_med);
+    printf("          Min: %013.9Lf\n", ld_minval);
+    printf("          Max: %013.9Lf\n", ld_maxval);
+    printf("        Range: %013.9Lf\n", ld_maxval - ld_minval);
+#ifdef __cplusplus
+    printf("Std deviation: %013.9Lf\n", calc_std_deviation(&ld_diffs[0], icnt, ld_mean));
+#else
+    printf("Std deviation: %013.9Lf\n", calc_std_deviation(ld_diffs, icnt, ld_mean));
+#endif
+}
