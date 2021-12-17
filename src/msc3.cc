@@ -4,7 +4,6 @@
 #include <fstream>
 #include <unistd.h>
 #include <ctype.h>
-#include <bits/stdc++.h>
 #include "regex.h"
 #include "regexutils.h"
 
