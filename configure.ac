@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([mscretest], [0.3], [airween@gmail.com])
+AC_INIT([mscretest], [0.4], [airween@gmail.com])
 AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config.h])

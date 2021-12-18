@@ -257,6 +257,18 @@ Note, see the difference in case of some patterns - it's awesome performance inc
 **Run a test N times**
 ```bash
 src/pcre4msc3 -n 5 path/to/pattern path/to/subject
+path/to/pattern - time elapsed: 0.000016934, match value: SUBJECT MATCHED 1 TIME
+path/to/pattern - time elapsed: 0.000002035, match value: SUBJECT MATCHED 1 TIME
+path/to/pattern - time elapsed: 0.000001125, match value: SUBJECT MATCHED 1 TIME
+path/to/pattern - time elapsed: 0.000001013, match value: SUBJECT MATCHED 1 TIME
+path/to/pattern - time elapsed: 0.000001029, match value: SUBJECT MATCHED 1 TIME
+Num of values: 5
+         Mean: 000.000004427
+       Median: 000.000002035
+          Min: 000.000001013
+          Max: 000.000016934
+        Range: 000.000015921
+Std deviation: 000.000006265
 ```
 
 **Statistics about run time if you run the tools with `-n`**
