@@ -1,5 +1,6 @@
-AM_CXXFLAGS = -Wall -g -O0 -lpcre -std=c++11 -fPIC
-AM_CFLAGS = -Wall -g -O0 -lpcre
+AM_CXXFLAGS = -Wall -g -O0 -std=c++11 -fPIC
+AM_CFLAGS = -Wall -g -O0
+AM_LDFLAGS=-lpcre
 
 bin_PROGRAMS = pcre4msc2 pcre4msc3
 
