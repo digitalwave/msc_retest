@@ -151,10 +151,12 @@ int main(int argc, char **argv) {
 
     FILE *fp;
     const char * patternfile = NULL, * subjectfile = NULL;
-    struct timeval tval_before, tval_after, tval_result;
+    //struct timeval tval_before, tval_after, tval_result;
+    struct timespec ts_before, ts_after, ts_diff;
+    long double *ld_diffs = NULL;
 
-    tval_result.tv_sec = 0;
-    tval_result.tv_usec = 0;
+    //tval_result.tv_sec = 0;
+    //tval_result.tv_usec = 0;
 
     if (argc < 2) {
       showhelp(argv[0]);
@@ -241,6 +243,14 @@ int main(int argc, char **argv) {
     if (patternfile == NULL) {
         showhelp(argv[0]);
         return EXIT_FAILURE;
+    }
+
+    if (icnt > 1) {
+        ld_diffs = calloc(icnt, sizeof(long double));
+        if (ld_diffs == NULL) {
+            fprintf(stderr, "Can't allocate memory for time diff array\n");
+            return EXIT_FAILURE;
+        }
     }
 
     // read pattern
@@ -370,7 +380,11 @@ int main(int argc, char **argv) {
     rc = 0; // initialize for debug level...
 
     for(i=0; i<icnt; i++) {
-        gettimeofday(&tval_before, NULL);
+        ts_diff.tv_sec  = 0;
+        ts_diff.tv_nsec = 0;
+
+        //gettimeofday(&tval_before, NULL);
+        clock_gettime(CLOCK_REALTIME, &ts_before);
         rc = pcre_exec(
             re,                   /* the compiled pattern */
             pce,                  /* no extra data - we didn't study the pattern */
@@ -381,11 +395,21 @@ int main(int argc, char **argv) {
             ovector,              /* output vector for substring information */
             OVECCOUNT             /* number of elements in the output vector */
         );
-        gettimeofday(&tval_after, NULL);
-        timersub(&tval_after, &tval_before, &tval_result);
+        //gettimeofday(&tval_after, NULL);
+        clock_gettime(CLOCK_REALTIME, &ts_after);
+        //timersub(&tval_after, &tval_before, &tval_result);
+        timespec_diff(&ts_after, &ts_before, &ts_diff);
         translate_error(rc, rcerror);
         debuglabel(debuglevel, "RESULT");
-        printf("%s - time elapsed: %ld.%06ld, match value: %s\n", patternfile, (long int)tval_result.tv_sec, (long int)tval_result.tv_usec, rcerror);
+        // printf("%s - time elapsed: %ld.%06ld, match value: %s\n", patternfile, (long int)tval_result.tv_sec, (long int)tval_result.tv_usec, rcerror);
+        printf("%s - time elapsed: %ld.%09ld, match value: %s\n", patternfile, (long int)ts_diff.tv_sec, (long int)ts_diff.tv_nsec, rcerror);
+        if (icnt > 1) {
+            ld_diffs[i] = ts_diff.tv_sec + (ts_diff.tv_nsec/1000000000.0);
+        }
+    }
+
+    if (icnt > 1) {
+        show_stat(&ld_diffs[0], icnt);
     }
 
     // show captured substrings - only once
@@ -423,6 +447,10 @@ int main(int argc, char **argv) {
         printf("]\n");
     }
 
+    if (ld_diffs != NULL) {
+        free(ld_diffs);
+    }
+
     pcre_free(re);
     if (pce != NULL) {
         pcre_free(pce);
@@ -432,7 +460,7 @@ int main(int argc, char **argv) {
     }
 
     if (time_limit > 0.0) {
-        if (((double)tval_result.tv_sec + ((double)(tval_result.tv_usec))/1000000.0) > time_limit) {
+        if (((double)ts_diff.tv_sec + ((double)(ts_diff.tv_nsec))/1000000000.0) > time_limit) {
             return EXIT_FAILURE;
         }
     }

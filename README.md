@@ -5,11 +5,11 @@ Welcome to the `msc_retest` documentation.
 Description
 ===========
 
-This tool compiles two binaries: `pcre4msc2` and `pcre4msc3`. The binaries emulates the behaviors of regex engine (PCRE - the old version) in mod_security2 (Apache module) and the libmodsecurity3. With this programs, you can check the evaulation time and result of every regular expressions with any random (including very extreme long) input. Both of them (regex pattern, input subject) needs to exists in two separated files, and you can pass them as argument. Subject can be passed through stdin, if you give '-' for subjectfile, eg:
+This tool compiles two binaries: `pcre4msc2` and `pcre4msc3`. The binaries emulates the behaviors of regex engine (PCRE - the old version) in mod_security2 (Apache module) and the libmodsecurity3. With this programs, you can check the evaluation time and result of every regular expressions with any random (including very extreme long) input. Both of them (regex pattern, input subject) needs to exists in two separated files, and you can pass them as argument. Subject can be passed through stdin, if you give '-' for subject file, eg:
 
 ```bash
 echo "arg=../../../etc/passwd&foo=var" | src/pcre4msc2 regexes/930110_1.txt -
-regexes/930110_1.txt - time elapsed: 0.000012, match value: SUBJECT MATCHED 1 TIME
+regexes/930110_1.txt - time elapsed: 0.000011753, match value: SUBJECT MATCHED 1 TIME
 ```
 or just simple leave it:
 
@@ -20,7 +20,7 @@ regexes/930110_1.txt - time elapsed: 0.000006, match value: SUBJECT MATCHED 1 TI
 
 The source tree contains some extra directories: under the `data/` you can find all of the regular expressions, what CRS uses. The files contains the id of the rule, and a suffix (there are some chained rules, where more parts uses `@rx`).
 
-The `utils/` directory contains a python tool, which helps to re-generate the regexes above. It uses `msc_pyparser` - for more information, see the README.md in that directory.
+The `utils/` directory contains a python tool, which helps to re-generate the regex's above. It uses `msc_pyparser` - for more information, see the README.md in that directory.
 
 Useful information
 ==================
@@ -30,25 +30,25 @@ There are so many difference between mod_security2 and libmodsecurity3 implement
 Parsing:
 --------
 
-* mod_security2 is an Apache module, so it uses the avaliable functions, including parsing of configuration files. Apache config parser strips the extra `\` (backslash) characters and escaped " if it is inside of quoted string. Eg. if the rule in the config contains a substring like `\\\\'`, then it will evaluated as `\\'`, if there is a pattern `\"` in a quoted string, then it will be `"`.
-* libmodsecurity3 uses an own parser, and it doesn't make any strip methods. But it does if the rule defined in the configuration file of the webserver.
+* mod_security2 is an Apache module, so it uses the available functions, including parsing of configuration files. Apache config parser strips the extra `\` (backslash) characters and escaped " if it is inside of quoted string. Eg. if the rule in the config contains a sub-string like `\\\\'`, then it will evaluated as `\\'`, if there is a pattern `\"` in a quoted string, then it will be `"`.
+* libmodsecurity3 uses an own parser, and it doesn't make any strip methods. But it does if the rule defined in the configuration file of the web server.
 
-This mean if the rule readed from the external file (like CRS), that will not be stripped, but if there is an inline rule (see [this](https://github.com/SpiderLabs/ModSecurity-nginx#modsecurity_rules)), then it will.
+This mean if the rule has been read from the external file (like CRS), that will not be stripped, but if there is an inline rule (see [this](https://github.com/SpiderLabs/ModSecurity-nginx#modsecurity_rules)), then it will.
 
 This strip function is implemented in `pcre4msc2` code itself.
 
 pcre_study(), JIT
 -----------------
 
-* mod_security2 module uses `pcre_study()` if it's avaliable, but **you can disable** it (with `--enable-pcre-study=no`)
-* mod_security2 module uses `PCRE_JIT` if it's avaliable **and you enabled it in build time** (with `--enable-pcre-jit`)
+* mod_security2 module uses `pcre_study()` if it's available, but **you can disable** it (with `--enable-pcre-study=no`)
+* mod_security2 module uses `PCRE_JIT` if it's available **and you enabled it in build time** (with `--enable-pcre-jit`)
 * libmodsecurity3 uses `pcre_study()` by default, and you **can't disable** it
 * libmodsecurity3 uses `PCRE_JIT` if it supported by the pcre library, **there isn't any option** to tune the engine
 
 limit match, limit match recursion
 ----------------------------------
 
-* mod_security2 module uses the `PCRE_EXTRA_MATCH_LIMIT` and `PCRE_EXTRA_MATCH_LIMIT_RECURSION` (see this on same page) flags; if you don't set them befure you build the source, the default values will be 1500
+* mod_security2 module uses the `PCRE_EXTRA_MATCH_LIMIT` and `PCRE_EXTRA_MATCH_LIMIT_RECURSION` (see this on same page) flags; if you don't set them before you build the source, the default values will be 1500
 * you can overwrite these values with `--enable-pcre-match-limit=N` and `--enable-pcre-match-limit-recursion=N`
 * you can disable these features with `--enable-pcre-match-limit=no` and `--enable-pcre-match-limit-recursion=no`
 * libmodsecurity3 doesn't supports these features at all
@@ -58,16 +58,16 @@ Here you can find more information about [pcre_study](https://www.pcre.org/origi
 Capture patterns with OVECTOR
 -----------------------------
 
-If `pcre_exec()` matches a regular expression against a given subject string, then it collects the subpatterns. The offsets values will stored in a vector of integers - this is the OVECTOR. It's very important, that the length if this vector must be divide by 3 (the correct values could be multiple of 3). It's important how long of this vector, this value determines the number of possible subpatterns.
+If `pcre_exec()` matches a regular expression against a given subject string, then it collects the sub-patterns. The offsets values will stored in a vector of integers - this is the OVECTOR. It's very important, that the length if this vector must be divide by 3 (the correct values could be multiple of 3). It's important how long of this vector, this value determines the number of possible sub-patterns.
 
 Both versions uses a precompiled value, mod_security2 uses 30, libmodsecurity3 uses 900. You can change these values only if you modify the source and recompile it again.
 
-These informations are very important to understand, why and how works the tools.
+These information are very important to understand, why and how works the tools.
 
 Other notes - outdated
 ----------------------
 
-The libmodsecurity3 `@rx` implementation had some design errors (which are now [fixed](https://github.com/SpiderLabs/ModSecurity/pull/2348)): the `searchAll()` method (which is same here as the original code) always collected the captured substrings from subject - this could be make slower the operator. The another thing was there was no limit: if the subject contained the pattern (for example) 100 times, then it collected all of them, so this could be lead to high memory usage (of course it depends on pattern and subject - but the collection will stores only the first 10 matches: from TX.0 to TX.9). Another problem was that this method was used for many other places, not just the `@rx` operator, eg. variables, transformations... `pcre4msc3` contains the fixed version, but you can allow the old method with `-f` argument. This argument works only with `pcre4msc3` tool.
+The libmodsecurity3 `@rx` implementation had some design errors (which are now [fixed](https://github.com/SpiderLabs/ModSecurity/pull/2348)): the `searchAll()` method (which is same here as the original code) always collected the captured sub-strings from subject - this could be make slower the operator. The another thing was there was no limit: if the subject contained the pattern (for example) 100 times, then it collected all of them, so this could be lead to high memory usage (of course it depends on pattern and subject - but the collection will stores only the first 10 matches: from TX.0 to TX.9). Another problem was that this method was used for many other places, not just the `@rx` operator, eg. variables, transformations... `pcre4msc3` contains the fixed version, but you can allow the old method with `-f` argument. This argument works only with `pcre4msc3` tool.
 
 In case of mod_security2, the engine doesn't collects all matches, only the first one.
 
@@ -129,7 +129,7 @@ Added regex subexpression to TX.0: is
 Requirements
 ============
 
-To compile the code you need the pcre library (eg. `libpcre3-dev` package on Debian - this is the old version), and the autotools.
+To compile the code you need the pcre library (eg. `libpcre3-dev` package on Debian  Debian - this is the old version), and the autotools.
 
 Build
 =====
@@ -151,10 +151,12 @@ A quick how to:
 echo "this is what is this" > subject.txt
 echo "(?:is)" > pattern.txt
 src/pcre4msc2 pattern.txt subject.txt
-pattern.txt - time elapsed: 0.000013, match value: SUBJECT MATCHED 1 TIME
+pattern.txt - time elapsed: 0.000017264, match value: SUBJECT MATCHED 1 TIME
 ```
 
-This means the subject doesn't matches with the regex, and the time taken 0.000009 sec (9 ms).
+This means the subject matched with the regex, and the time taken 0.000017264 sec (17.264 usec = 17 264 nanosecs).
+
+**Note: all measured time are in nanoseconds.**
 
 You can check the exit status of program:
 ```bash
@@ -166,7 +168,7 @@ Now check the elapsed time in the output - that's a very important value. That s
 
 ```bash
 src/pcre4msc2 -t 0.000001 pattern.txt subject.txt
-pattern.txt - time elapsed: 0.000013, match value: SUBJECT MATCHED 1 TIME
+pattern.txt - time elapsed: 0.000016613, match value: SUBJECT MATCHED 1 TIME
 echo $?
 1
 ```
@@ -175,7 +177,7 @@ As you can see, the time limit (argument of `-t`) is 0.000001 second (1 ms), it'
 
 ```bash
 src/pcre4msc2 -t 0.0001 pattern.txt subject.txt
-pattern.txt - time elapsed: 0.000013, match value: SUBJECT MATCHED 1 TIME
+pattern.txt - time elapsed: 0.000017574, match value: SUBJECT MATCHED 1 TIME
 echo $?
 0
 ```
@@ -193,7 +195,7 @@ Based on the [information](#Useful%20information':ignore') above, now let's see 
 |   `-j` | no               | use jit          |     supported | not supported |
 |   `-s` | no               | ignore study     |     supported | not supported |
 |   `-n` | yes              | number of runs   |     supported |     supported |
-|   `-m` | yes              | mathch limit     |     supported | not supported |
+|   `-m` | yes              | match limit      |     supported | not supported |
 |   `-r` | yes              | match lim. rec.  |     supported | not supported |
 |   `-t` | yes              | exec. time lim.  |     supported |     supported |
 |   `-d` | no               | show details     |     supported |     supported |
@@ -232,7 +234,7 @@ for d in `ls -1 regexes/9*.txt`; do src/pcre4msc3 ${d} /path/to/subject.txt; don
 for d in `ls -1 regexes/9*.txt`; do src/pcre4msc3 ${d} /path/to/subject.txt; done | grep "\([1-9][0-9]\|[1-9]\)\.[0-9]"
 ```
 
-**Collect regexes where the runtime over your limit (0.00001 sec)**
+**Collect regex's where the run time over your limit (0.00001 sec)**
 
 ```bash
 for d in `ls -1 regexes/9*.txt`; do src/pcre4msc2 -t 0.00001 -j ${d} /path/to/subject.txt; if [ $? -ne 0 ]; then echo "Time limit exceeded: ${d}"; fi; done | grep "Time limit"
@@ -244,7 +246,7 @@ for d in `ls -1 regexes/9*.txt`; do src/pcre4msc2 -t 0.00001 -j ${d} /path/to/su
 for d in `ls -1 regexes/9*.txt`; do src/pcre4msc2 -j ${d} /path/to/subject.txt; done
 ```
 
-**Check again and compare the long times with 2nd exampe.**
+**Check again and compare the long times with 2nd example.**
 
 ```bash
 for d in `ls -1 regexes/9*.txt`; do src/pcre4msc2 -j ${d} /path/to/subject.txt; done | grep "\([1-9][0-9]\|[1-9]\)\.[0-9]"
@@ -255,7 +257,55 @@ Note, see the difference in case of some patterns - it's awesome performance inc
 **Run a test N times**
 ```bash
 src/pcre4msc3 -n 5 path/to/pattern path/to/subject
+path/to/pattern - time elapsed: 0.000016934, match value: SUBJECT MATCHED 1 TIME
+path/to/pattern - time elapsed: 0.000002035, match value: SUBJECT MATCHED 1 TIME
+path/to/pattern - time elapsed: 0.000001125, match value: SUBJECT MATCHED 1 TIME
+path/to/pattern - time elapsed: 0.000001013, match value: SUBJECT MATCHED 1 TIME
+path/to/pattern - time elapsed: 0.000001029, match value: SUBJECT MATCHED 1 TIME
+Num of values: 5
+         Mean: 000.000004427
+       Median: 000.000002035
+          Min: 000.000001013
+          Max: 000.000016934
+        Range: 000.000015921
+Std deviation: 000.000006265
 ```
+
+**Statistics about run time if you run the tools with `-n`**
+
+Take a look to this example:
+
+```bash
+$ src/pcre4msc2 -j -n 10 pattern.txt subject.txt
+pattern.txt - time elapsed: 0.000003900, match value: SUBJECT MATCHED 1 TIME
+pattern.txt - time elapsed: 0.000000348, match value: SUBJECT MATCHED 1 TIME
+pattern.txt - time elapsed: 0.000000215, match value: SUBJECT MATCHED 1 TIME
+pattern.txt - time elapsed: 0.000000188, match value: SUBJECT MATCHED 1 TIME
+pattern.txt - time elapsed: 0.000000196, match value: SUBJECT MATCHED 1 TIME
+pattern.txt - time elapsed: 0.000000190, match value: SUBJECT MATCHED 1 TIME
+pattern.txt - time elapsed: 0.000000191, match value: SUBJECT MATCHED 1 TIME
+pattern.txt - time elapsed: 0.000000191, match value: SUBJECT MATCHED 1 TIME
+pattern.txt - time elapsed: 0.000000192, match value: SUBJECT MATCHED 1 TIME
+pattern.txt - time elapsed: 0.000000190, match value: SUBJECT MATCHED 1 TIME
+Num of values: 10
+         Mean: 000.000000580
+       Median: 000.000000194
+          Min: 000.000000188
+          Max: 000.000003900
+        Range: 000.000003712
+Std deviation: 000.000001108
+```
+
+All time values are in nanoseconds. Below the last line you can see the quick summary:
+
+ * `Num of values` - how many times did you run
+ * `Mean` - the average value of all measured times
+ * `Median` - the median value of all measured times
+ * `Min`, `Max` - the minimum and maximum values of all measured times
+ * `Range` - the distance of max and min values
+ * `Std deviation` - the [standard deviation](https://en.wikipedia.org/wiki/Standard_deviation)
+
+**Note: the summary will displayed only if you run the tool with `-n N`, where `N` > 1.**
 
 **Change the match and/or recursion limit**
 ```bash
@@ -379,7 +429,7 @@ OVECTOR:
 
 As you can see, the escaped pattern is shorter than the original.
 
-Note, the substring between the two asterisks is also higlighted.
+Note, the sub-string between the two asterisks is also highlighted.
 
 **See the detailed output from the previous example with pcre4msc3**
 ```bash
@@ -413,7 +463,7 @@ OVECTOR:
 [2, 4, 5, 7, 13, 15, 18, 20]
 
 ```
-As you can see, the ModSecurity3 pattern matching code founds the all occurance of substring. Note, that this isn't the escaped pattern part, because this engine doesn't do that. Match limit and match limit recursion also doesn't exists, because they aren't used.
+As you can see, the ModSecurity3 pattern matching code founds the all occurrence of sub-string. Note, that this isn't the escaped pattern part, because this engine doesn't do that. Match limit and match limit recursion also doesn't exists, because they aren't used.
 
 See the screenshot:
 

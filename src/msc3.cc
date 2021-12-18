@@ -32,9 +32,12 @@ int main(int argc, char ** argv) {
     int icnt = 1, rc = 0;
     bool use_old = false;
     float time_limit = 0.0;
-    double m_sub = 0.0;
+    // double m_sub = 0.0;
     int debuglevel = 0;  // may be later we can use different level...
     char stdinname[] = "-";
+
+    struct timespec ts_before, ts_after, ts_diff;
+    std::vector<long double> ld_diffs;
 
     if (argc < 2) {
       showhelp(argv[0]);
@@ -147,7 +150,10 @@ int main(int argc, char ** argv) {
 
         re->m_retList.clear();
 
-        clock_t m_start = clock();
+        ts_diff.tv_sec  = 0;
+        ts_diff.tv_nsec = 0;
+
+        clock_gettime(CLOCK_REALTIME, &ts_before);
         if (use_old == false) {
             captures.clear();
             re->searchOneMatch(subject, captures);
@@ -157,8 +163,8 @@ int main(int argc, char ** argv) {
             retval = re->searchAll(subject);
             rc = retval.size();
         }
-        clock_t m_end = clock();
-        m_sub = (m_end - m_start) / double(CLOCKS_PER_SEC);
+        clock_gettime(CLOCK_REALTIME, &ts_after);
+        timespec_diff(&ts_after, &ts_before, &ts_diff);
         // minimal value of re->m_execrc is 0, this means no match
         // in this case we have to decrease the valur for the correct message
         if (rc == 0) {
@@ -166,7 +172,15 @@ int main(int argc, char ** argv) {
         }
         translate_error(rc, rcerror);
         debugvalue(debuglevel, std::string("RESULT"), std::string(""));
-        std::cout << patternfile << " - time elapsed: " << std::fixed << std::setfill('0') << std::setw(6) << m_sub << ", match value: " << rcerror << std::endl;
+        // std::cout << patternfile << " - time elapsed: " << std::fixed << std::setfill('0') << std::setw(6) << m_sub << ", match value: " << rcerror << std::endl;
+        std::cout << patternfile << " - time elapsed: " << ts_diff.tv_sec << "." << std::fixed << std::setfill('0') << std::setw(9) << ts_diff.tv_nsec << ", match value: " << rcerror << std::endl;
+        if (icnt > 1) {
+            ld_diffs.push_back(ts_diff.tv_sec + (ts_diff.tv_nsec/1000000000.0));
+        }
+    }
+
+    if (icnt > 1) {
+        show_stat(&ld_diffs[0], icnt);
     }
 
     // show captured substrings if debug was set
@@ -221,7 +235,7 @@ int main(int argc, char ** argv) {
     // end debug
 
     if (time_limit > 0.0) {
-        if (m_sub > time_limit) {
+        if (((double)ts_diff.tv_sec + ((double)(ts_diff.tv_nsec))/1000000000.0) > time_limit) {
             return EXIT_FAILURE;
         }
     }
