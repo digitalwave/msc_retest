@@ -1,5 +1,8 @@
 v0.4 - YYYY-MM-dd
 -----------------
+  * Added necessary headers: limits.h, iterator
+  * Removed unnecessary header, clang didn't find that - thanks @fzipi
+  * Fixed STDIN handling - thanks @fzipi
   * Spelling fixes
   * Moved data/ dir to regexes/
   * Increased the -n max value (INT_MAX)
