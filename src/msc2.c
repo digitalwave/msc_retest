@@ -293,7 +293,7 @@ int main(int argc, char **argv) {
     //   or read from stdin
     else {
         i = 0;
-        while ((ci = getchar()) != '\n' && ci != EOF && i < FILESIZEMAX) {
+        while ((ci = getchar()) && ci != EOF && i < FILESIZEMAX) {
             subject[i++] = ci;
         }
         subject_length = (int)strlen(subject);

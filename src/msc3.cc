@@ -4,7 +4,6 @@
 #include <fstream>
 #include <unistd.h>
 #include <ctype.h>
-#include <bits/stdc++.h>
 #include "regex.h"
 #include "regexutils.h"
 
@@ -131,7 +130,12 @@ int main(int argc, char ** argv) {
     }
     //   or read from stdin
     else {
-        std::getline(std::cin, subject);
+      // don't skip the whitespace while reading
+      std::cin >> std::noskipws;
+      // use stream iterators to copy the stream to a string
+      std::istream_iterator<char> it(std::cin);
+      std::istream_iterator<char> end;
+      subject.assign(it, end);
     }
 
     debugvalue(debuglevel, std::string("SUBJECT"), subject);
