@@ -2,8 +2,10 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <iterator>
 #include <unistd.h>
 #include <ctype.h>
+#include <limits.h>
 #include "regex.h"
 #include "regexutils.h"
 
