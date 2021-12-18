@@ -1,5 +1,6 @@
-v0.4 - YYYY-MM-dd
+v0.4 - 2021-12-18
 -----------------
+  * Removed unnecessary linker flags
   * Added necessary headers: limits.h, iterator
   * Removed unnecessary header, clang didn't find that - thanks @fzipi
   * Fixed STDIN handling - thanks @fzipi
