@@ -1,0 +1,1 @@
+(?:class\.module\.classLoader\.resources\.context\.parent\.pipeline|springframework\.context\.support\.FileSystemXmlApplicationContext)

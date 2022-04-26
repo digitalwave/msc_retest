@@ -1,1 +1,1 @@
-(?:^|[^\\\\])\\\\[cdeghijklmpqwxyz123456789]
+(?:^|[^\x5c])\x5c[cdeghijklmpqwxyz123456789]

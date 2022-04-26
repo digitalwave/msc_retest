@@ -1,1 +1,1 @@
-(?i:(?:[\"'`](?:;*?\s*?waitfor\s+(?:delay|time)\s+[\"'`]|;.*?:\s*?goto)|alter\s*?\w+.*?cha(?:racte)?r\s+set\s+\w+))
+(?i)(?:[\"'`](?:;*?\s*?waitfor\s+(?:delay|time)\s+[\"'`]|;.*?:\s*?goto)|alter\s*?\w+.*?cha(?:racte)?r\s+set\s+\w+)

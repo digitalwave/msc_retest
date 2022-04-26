@@ -1,0 +1,1 @@
+^<title>PHP Web Shell</title>\r\n<html>\r\n<body>\r\n    <!-- Replaces command with Base64-encoded Data -->

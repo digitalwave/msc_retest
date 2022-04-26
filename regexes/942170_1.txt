@@ -1,1 +1,1 @@
-(?i:(?:select|;)\s+(?:benchmark|sleep|if)\s*?\(\s*?\(?\s*?\w+)
+(?i)(?:select|;)\s+(?:benchmark|sleep|if)\s*?\(\s*?\(?\s*?\w+

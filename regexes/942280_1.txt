@@ -1,1 +1,1 @@
-(?i:(?:;\s*?shutdown\s*?(?:[#;]|\/\*|--|\{)|waitfor\s*?delay\s?[\"'`]+\s?\d|select\s*?pg_sleep))
+(?i)(?:;\s*?shutdown\s*?(?:[#;{]|\/\*|--)|waitfor\s*?delay\s?[\"'`]+\s?\d|select\s*?pg_sleep)

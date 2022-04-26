@@ -1,0 +1,1 @@
+^(?:(?:max-age=[0-9]+|min-fresh=[0-9]+|no-cache|no-store|no-transform|only-if-cached|max-stale(?:=[0-9]+)?)(?:\s*\,\s*|$)){1,7}$

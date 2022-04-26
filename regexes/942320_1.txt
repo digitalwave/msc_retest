@@ -1,1 +1,1 @@
-(?i:(?:create\s+(?:procedure|function)\s*?\w+\s*?\(\s*?\)\s*?-|;\s*?(?:declare|open)\s+[\w-]+|procedure\s+analyse\s*?\(|declare[^\w]+[@#]\s*?\w+|exec\s*?\(\s*?\@))
+(?i)(?:create\s+(?:procedure|function)\s*?\w+\s*?\(\s*?\)\s*?-|;\s*?(?:declare|open)\s+[\w-]+|procedure\s+analyse\s*?\(|declare[^\w]+[@#]\s*?\w+|exec\s*?\(\s*?@)

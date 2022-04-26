@@ -1,1 +1,1 @@
-(?i:[\s()]case\s*?\(|\)\s*?like\s*?\(|having\s*?[^\s]+\s*?[^\w\s]|if\s?\([\d\w]\s*?[=<>~])
+(?i)(?:select.*?having\s*?[^\s]+\s*?[^\w\s]|[\s()]case\s+when.*?then|if\s?\(\w+\s*?[=<>~]|\)\s*?like\s*?\()

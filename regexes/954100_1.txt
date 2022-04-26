@@ -1,1 +1,1 @@
-[a-z]:\\\\inetpub\b
+[a-z]:\x5cinetpub\b

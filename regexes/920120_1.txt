@@ -1,1 +1,1 @@
-(?<!&(?:[aAoOuUyY]uml)|&(?:[aAeEiIoOuU]circ)|&(?:[eEiIoOuUyY]acute)|&(?:[aAeEiIoOuU]grave)|&(?:[cC]cedil)|&(?:[aAnNoO]tilde)|&(?:amp)|&(?:apos));|['\"=]
+(?i)^(?:&(?:(?:[aeiouclnrszg]acut|[aeiou]grav|[anoi]tild)e|(?:[cgklnrst]cedi|[aeiouy]um)l|[aeioucghjswy]circ|[cdelnrstz]caron|a(?:pos|mp)|[au]ring|oslash|nbsp);|[^'\";=])*$

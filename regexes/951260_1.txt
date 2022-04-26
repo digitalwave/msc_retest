@@ -1,1 +1,1 @@
-(?i)(?:Sybase message:|Warning.*sybase.*|Sybase.*Server message.*)
+(?i)(?:Sybase message:|Warning.{2,20}sybase|Sybase.*Server message.*)

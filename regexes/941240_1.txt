@@ -1,1 +1,1 @@
-<[?]?import[\s\/+\S]*?implementation[\s\/+]*?=
+<[?]?import[\s/+\S]*?implementation[\s/+]*?=
