@@ -14,7 +14,6 @@
 #ifndef SRC_UTILS_REGEX_H_
 #define SRC_UTILS_REGEX_H_
 
-
 #define OVECCOUNT 900
 
 void debugvalue(int debuglevel, std::string label, std::string value);
@@ -48,25 +47,50 @@ struct SMatchCapture {
     size_t m_length;
 };
 
-class Regex {
+class RegexBase {
  public:
-    explicit Regex(const std::string& pattern_, int debuglevel);
-    ~Regex();
+    RegexBase(const std::string& pattern_, int debuglevel);
+    virtual ~RegexBase() {};
     std::string pattern;
     // m_debuglevel: not part of original code:
     int m_debuglevel;
-    pcre *m_pc = NULL;
-    pcre_extra *m_pce = NULL;
     int m_ovector[OVECCOUNT];
     // store pcre_exec return value for caller method
     // note, this also isn't part of original code
     int m_execrc;
     std::list<SMatch> m_retList;
 
-    std::list<SMatch> searchAll(const std::string& s);
-    bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const;
-    int searchAll2(const std::string& s, size_t capturelen);
+    virtual std::list<SMatch> searchAll(const std::string& s) = 0;
+    virtual bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const = 0;
 };
 
+class Regex: public RegexBase {
+ public:
+    explicit Regex(const std::string& pattern_, int debuglevel);
+    ~Regex();
+
+    std::list<SMatch> searchAll(const std::string& s);
+    bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const;
+
+ private:
+    pcre *m_pc = NULL;
+    pcre_extra *m_pce = NULL;
+};
+
+#ifdef HAVE_PCRE2
+
+class Regexv2: public RegexBase {
+ public:
+    explicit Regexv2(const std::string& pattern_, int debuglevel);
+    ~Regexv2();
+
+    std::list<SMatch> searchAll(const std::string& s);
+    bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const;
+
+ private:
+    pcre2_code *m_pc;
+    pcre2_match_data *m_match_data;
+};
+#endif  // HAVE_PCRE2
 
 #endif  // SRC_UTILS_REGEX_H_

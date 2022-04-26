@@ -7,7 +7,6 @@
 #include <ctype.h>
 #include <limits.h>
 #include "regex.h"
-#include "regexutils.h"
 
 void showhelp(char * name) {
     std::cout << "Use: " << name << " [OPTIONS] patternfile subjectfile" << std::endl;
@@ -20,12 +19,15 @@ void showhelp(char * name) {
     std::cout << "\t-f\tForce to use old modsec v3 regex matching method." << std::endl;
     std::cout << "\t-t T\tExpects a float value; if the (last) pcre_exec time is greater than this," << std::endl;
     std::cout << "\t    \tthe exit status of program will non-zero." << std::endl;
+#ifdef HAVE_PCRE2
+    std::cout << "\t-2  \tuse PCRE2 engine." << std::endl;
+#endif
     std::cout << "\t-d  \tShow detailed information." << std::endl;
     std::cout << std::endl;
 }
 
 int main(int argc, char ** argv) {
-    Regex *re;
+    RegexBase *re;
     char rcerror[100];
     char * patternfile = NULL, * subjectfile = NULL;
     char c;
@@ -35,6 +37,7 @@ int main(int argc, char ** argv) {
     // double m_sub = 0.0;
     int debuglevel = 0;  // may be later we can use different level...
     char stdinname[] = "-";
+    bool use_pcre2 = false;
 
     struct timespec ts_before, ts_after, ts_diff;
     std::vector<long double> ld_diffs;
@@ -44,7 +47,7 @@ int main(int argc, char ** argv) {
       return EXIT_FAILURE;
     }
 
-    while ((c = getopt (argc, argv, "hfn:t:d")) != -1) {
+    while ((c = getopt (argc, argv, "hfn:t:d2")) != -1) {
         switch (c) {
             case 'h':
                 showhelp(argv[0]);
@@ -69,6 +72,15 @@ int main(int argc, char ** argv) {
             case 'd':
                 debuglevel = 1;
                 break;
+#ifdef HAVE_PCRE2
+            case '2':
+                use_pcre2 = true;
+                break;
+#else
+            case '2':
+                fprintf(stderr, "PCRE2 engine is not available.\n");
+                return EXIT_FAILURE;
+#endif
             case '?':
                 if (optopt == 'n' || optopt == 't') {
                     std::cerr << "Option -" << (char)optopt << " requires an argument." << std::endl;
@@ -142,7 +154,16 @@ int main(int argc, char ** argv) {
 
     debugvalue(debuglevel, std::string("SUBJECT"), subject);
 
-    re = new Regex(pattern, debuglevel);
+    re = NULL;
+
+    if (! use_pcre2) {
+        re = new Regex(pattern, debuglevel);
+    }
+    else {
+#ifdef HAVE_PCRE2
+        re = new Regexv2(pattern, debuglevel);
+#endif
+    }
     std::list<SMatch> retval;
     std::vector<SMatchCapture> captures;
 

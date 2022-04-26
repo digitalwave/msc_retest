@@ -129,7 +129,7 @@ Added regex subexpression to TX.0: is
 Requirements
 ============
 
-To compile the code you need the pcre library (eg. `libpcre3-dev` package on Debian  Debian - this is the old version), and the autotools.
+To compile the code you need the pcre library (eg. `libpcre3-dev` package on Debian - this is the old version), and the autotools. `libmodsecurity3` supports `pcre2` too, so `pcre4msc3` supports `pcre2` engine too, if `libpcre2-dev` is available.
 
 Build
 =====
@@ -141,6 +141,8 @@ autoreconf --install
 ./configure
 make
 ```
+
+To disable `pcre2` support for `pcre4msc3`, pass the argument `--without-pcre2` to `./configure` script.
 
 Use
 ===
@@ -190,8 +192,8 @@ Extra options
 Based on the [information](#Useful%20information':ignore') above, now let's see the possible options for the tools.
 
  
-| option | parameter needed | meaning          |  pcre4msc2 |    pcre4msc3 |
-|-------:|-----------------:|-----------------:|-----------:|-------------:|
+| option | parameter needed | meaning          |  pcre4msc2    |     pcre4msc3 |
+|-------:|-----------------:|-----------------:|--------------:|--------------:|
 |   `-j` | no               | use jit          |     supported | not supported |
 |   `-s` | no               | ignore study     |     supported | not supported |
 |   `-n` | yes              | number of runs   |     supported |     supported |
@@ -200,6 +202,7 @@ Based on the [information](#Useful%20information':ignore') above, now let's see 
 |   `-t` | yes              | exec. time lim.  |     supported |     supported |
 |   `-d` | no               | show details     |     supported |     supported |
 |   `-f` | no               | force alt. meth. | not supported |     supported |
+|   `-2` | no               | use pcre2 if av. | not supported |     supported |
 
 and `-h` of course.
 

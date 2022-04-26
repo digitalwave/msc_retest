@@ -1,3 +1,9 @@
+v0.5 - YYYY-MM-DD
+-----------------
+  * Added pcre2 support for pcre4msc3
+    see PR #2719 in original code
+    https://github.com/SpiderLabs/ModSecurity/pull/2719
+
 v0.4 - 2021-12-18
 -----------------
   * Removed unnecessary linker flags

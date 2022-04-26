@@ -5,7 +5,13 @@
 #ifndef _REGEXUTILS_H
 #define _REGEXUTILS_H
 
+#include "config.h"
+
 #include <pcre.h>
+#ifdef HAVE_PCRE2
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
+#endif /* HAVE_PCRE2 */
 #include <string.h>
 #include <stdlib.h>
 #ifndef __cplusplus
