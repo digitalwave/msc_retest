@@ -21,6 +21,7 @@ void showhelp(char * name) {
     std::cout << "\t    \tthe exit status of program will non-zero." << std::endl;
 #ifdef HAVE_PCRE2
     std::cout << "\t-2  \tuse PCRE2 engine." << std::endl;
+    std::cout << "\t-j  \tuse JIT for PCRE2 engine." << std::endl;
 #endif
     std::cout << "\t-d  \tShow detailed information." << std::endl;
     std::cout << std::endl;
@@ -38,6 +39,7 @@ int main(int argc, char ** argv) {
     int debuglevel = 0;  // may be later we can use different level...
     char stdinname[] = "-";
     bool use_pcre2 = false;
+    bool use_jit   = false;
 
     struct timespec ts_before, ts_after, ts_diff;
     std::vector<long double> ld_diffs;
@@ -47,7 +49,7 @@ int main(int argc, char ** argv) {
       return EXIT_FAILURE;
     }
 
-    while ((c = getopt (argc, argv, "hfn:t:d2")) != -1) {
+    while ((c = getopt (argc, argv, "hfn:t:d2j")) != -1) {
         switch (c) {
             case 'h':
                 showhelp(argv[0]);
@@ -76,9 +78,15 @@ int main(int argc, char ** argv) {
             case '2':
                 use_pcre2 = true;
                 break;
+            case 'j':
+                use_jit = true;
+                break;
 #else
             case '2':
                 fprintf(stderr, "PCRE2 engine is not available.\n");
+                return EXIT_FAILURE;
+            case 'j':
+                fprintf(stderr, "JIT can be use only when PCRE2 engine is not available and used.\n");
                 return EXIT_FAILURE;
 #endif
             case '?':
@@ -95,6 +103,11 @@ int main(int argc, char ** argv) {
             default:
                 abort ();
         }
+    }
+
+    if (use_jit == true && use_pcre2 == false) {
+        fprintf(stderr, "JIT can be use only when PCRE2 engine is not available and used.\n");
+        return EXIT_FAILURE;
     }
 
     for (int i = optind; i < argc; i++) {
@@ -161,7 +174,7 @@ int main(int argc, char ** argv) {
     }
     else {
 #ifdef HAVE_PCRE2
-        re = new Regexv2(pattern, debuglevel);
+        re = new Regexv2(pattern, debuglevel, use_jit);
 #endif
     }
     std::list<SMatch> retval;

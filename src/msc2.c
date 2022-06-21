@@ -377,6 +377,21 @@ int main(int argc, char **argv) {
     }
 #endif
 
+    if (debuglevel > 0) {
+        printf("\nDETAILED INFORMATION:\n=====================\n");
+        _DISPLAY_PCRE_PROP(PCRE_INFO_BACKREFMAX);
+        _DISPLAY_PCRE_PROP(PCRE_INFO_CAPTURECOUNT);
+        _DISPLAY_PCRE_PROP(PCRE_INFO_JIT);
+        _DISPLAY_PCRE_PROP_UL(PCRE_INFO_JITSIZE);
+        _DISPLAY_PCRE_PROP(PCRE_INFO_MINLENGTH);
+        _DISPLAY_PCRE_PROP_U(PCRE_INFO_MATCHLIMIT);
+        _DISPLAY_PCRE_PROP(PCRE_INFO_OPTIONS);
+        _DISPLAY_PCRE_PROP(PCRE_INFO_SIZE);
+        _DISPLAY_PCRE_PROP_UL(PCRE_INFO_STUDYSIZE);
+        _DISPLAY_PCRE_PROP_UL(PCRE_INFO_RECURSIONLIMIT);
+        _DISPLAY_PCRE_PROP(PCRE_INFO_REQUIREDCHAR);
+    }
+
     rc = 0; // initialize for debug level...
 
     for(i=0; i<icnt; i++) {

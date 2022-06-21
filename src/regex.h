@@ -79,17 +79,32 @@ class Regex: public RegexBase {
 
 #ifdef HAVE_PCRE2
 
+#define _DISPLAY_PCRE2_PROP(_what) do { \
+                int l_opt; \
+                pcre2_pattern_info(re, _what, &l_opt); \
+                NDBG_OUTPUT("%25s: %d\n", #_what, l_opt); \
+        } while(0)
+#define _DISPLAY_PCRE2_PROP_U(_what) do { \
+                uint32_t l_opt; \
+                pcre2_pattern_info(re, _what, &l_opt); \
+                NDBG_OUTPUT("%25s: %u\n", #_what, l_opt); \
+        } while(0)
+#define _DISPLAY_PCRE2_PROP_UL(_what) do { \
+                size_t l_opt; \
+                pcre2_pattern_info(re, _what, &l_opt); \
+                NDBG_OUTPUT("%25s: %lu\n", #_what, l_opt); \
+        } while(0)
+
 class Regexv2: public RegexBase {
  public:
-    explicit Regexv2(const std::string& pattern_, int debuglevel);
+    explicit Regexv2(const std::string& pattern_, int debuglevel, bool use_jit);
     ~Regexv2();
 
     std::list<SMatch> searchAll(const std::string& s);
     bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const;
 
  private:
-    pcre2_code *m_pc;
-    pcre2_match_data *m_match_data;
+    pcre2_code *m_pc = NULL;
 };
 #endif  // HAVE_PCRE2
 

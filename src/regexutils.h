@@ -47,4 +47,31 @@ static inline void timespec_diff(struct timespec *a, struct timespec *b, struct 
     }
 }
 
+/*
+ * https://gist.github.com/tinselcity/acdf11737b5e2cc5ac9f14bd96310a3a
+ */
+#ifndef NDBG_OUTPUT
+#define NDBG_OUTPUT(...) \
+        do { \
+                fprintf(stdout, __VA_ARGS__); \
+                fflush(stdout); \
+        } while(0)
+#endif
+
+#define _DISPLAY_PCRE_PROP(_what) do { \
+                int l_opt; \
+                pcre_fullinfo(re, pce, _what, &l_opt); \
+                NDBG_OUTPUT("%25s: %d\n", #_what, l_opt); \
+        } while(0)
+#define _DISPLAY_PCRE_PROP_U(_what) do { \
+                uint32_t l_opt; \
+                pcre_fullinfo(re, pce, _what, &l_opt); \
+                NDBG_OUTPUT("%25s: %u\n", #_what, l_opt); \
+        } while(0)
+#define _DISPLAY_PCRE_PROP_UL(_what) do { \
+                size_t l_opt; \
+                pcre_fullinfo(re, pce, _what, &l_opt); \
+                NDBG_OUTPUT("%25s: %lu\n", #_what, l_opt); \
+        } while(0)
+
 #endif
