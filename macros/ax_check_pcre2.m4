@@ -79,8 +79,7 @@ AC_DEFUN([AX_CHECK_PCRE2],
 pcre2_places="/usr/local /usr /opt/local /sw"
 AC_ARG_WITH([pcre2],
 [  --with-pcre2=DIR        root directory path of PCRE2 installation @<:@defaults to
-                          /usr/local or /usr if not found in /usr/local@:>@
-  --without-pcre2         to disable PCRE2 usage completely],
+                          /usr/local or /usr if not found in /usr/local@:>@],
 [if test "$withval" != "no" ; then
   AC_MSG_RESULT(yes)
   if test -d "$withval"
@@ -91,7 +90,7 @@ AC_ARG_WITH([pcre2],
   fi
 else
   pcre2_places=""
-  AC_MSG_RESULT(no)
+  AC_MSG_ERROR(["Can't use this tool without PCRE2 library"])
 fi],
 [AC_MSG_RESULT(yes)])
 #
@@ -156,7 +155,7 @@ then
     # If either header or library was not found, action-if-not-found
     #
     m4_default([$3],[
-                AC_MSG_ERROR([either specify a valid PCRE2 installation with --with-pcre2=DIR or disable PCRE2 usage with --without-pcre2])
+                AC_MSG_ERROR([either specify a valid PCRE2 installation with --with-pcre2=DIR])
                 ])
   fi
 fi
