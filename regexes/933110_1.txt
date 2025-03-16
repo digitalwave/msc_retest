@@ -1,1 +1,1 @@
-.*\.(?:php\d*|phtml)\.*$
+.*\.ph(?:p\d*|tml|ar|ps|t|pt)\.*$

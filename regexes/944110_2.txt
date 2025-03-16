@@ -1,1 +1,1 @@
-(?:unmarshaller|base64data|java\.)
+(?i)(?:unmarshaller|base64data|java\.)

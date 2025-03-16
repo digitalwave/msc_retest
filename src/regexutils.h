@@ -7,11 +7,11 @@
 
 #include "config.h"
 
+#ifdef WITH_OLD_PCRE
 #include <pcre.h>
-#ifdef HAVE_PCRE2
+#endif /* WITH_OLD_PCRE */
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
-#endif /* HAVE_PCRE2 */
 #include <string.h>
 #include <stdlib.h>
 #ifndef __cplusplus
@@ -19,12 +19,12 @@
 #endif
 
 #ifdef __cplusplus
-extern "C" void translate_error(int, char *);
+extern "C" void translate_error(int, int, char *);
 extern "C" int compare_ld (const void *, const void *);
 extern "C" long double calc_std_deviation(const long double *, const int, const long double);
 extern "C" void show_stat(long double *, int);
 #else
-void translate_error(int, char *);
+void translate_error(int, int, char *);
 int compare_ld (const void *, const void *);
 long double calc_std_deviation(const long double *, const int, const long double);
 void show_stat(long double *, int);
@@ -38,7 +38,7 @@ void show_stat(long double *, int);
 #define BOLDGREEN   "\033[1m\033[32m"   /* Bold Green */
 
 // https://gist.github.com/diabloneo/9619917#gistcomment-3364033
-static inline void timespec_diff(struct timespec *a, struct timespec *b, struct timespec *result) {
+static inline void timespec_diff(const struct timespec *a, const struct timespec *b, struct timespec *result) {
     result->tv_sec  = a->tv_sec  - b->tv_sec;
     result->tv_nsec = a->tv_nsec - b->tv_nsec;
     if (result->tv_nsec < 0) {

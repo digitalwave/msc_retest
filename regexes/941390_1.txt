@@ -1,0 +1,1 @@
+(?i)\b(?:eval|set(?:timeout|interval)|new[\s\x0b]+Function|a(?:lert|tob)|btoa|prompt|confirm)[\s\x0b]*\(

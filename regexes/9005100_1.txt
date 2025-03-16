@@ -1,1 +1,0 @@
-^GET /whm-server-status(?:/|/\?auto)? HTTP/[12]\.[01]$

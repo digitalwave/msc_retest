@@ -1,1 +1,1 @@
-(?i)(?:select|;)\s+(?:benchmark|sleep|if)\s*?\(\s*?\(?\s*?\w+
+(?i)(?:select|;)[\s\x0b]+(?:benchmark|if|sleep)[\s\x0b]*?\([\s\x0b]*?\(?[\s\x0b]*?[0-9A-Z_a-z]+

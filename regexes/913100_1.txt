@@ -1,1 +1,0 @@
-^(?:urlgrabber/[0-9\.]+ yum/[0-9\.]+|mozilla/[0-9\.]+ ecairn-grabber/[0-9\.]+ \(\+http://ecairn.com/grabber\))$

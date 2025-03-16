@@ -1,0 +1,1 @@
+Process[\s\x0b]*\.[\s\x0b]*spawn[\s\x0b]*\(

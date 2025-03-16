@@ -1,6 +1,6 @@
 AM_CXXFLAGS = -Wall -g -O0 -std=c++11 -fPIC
 AM_CFLAGS = -Wall -g -O0
-AM_LDFLAGS=-lpcre
+AM_LDFLAGS= $(PCRE2_LDFLAGS) $(PCRE_OLD_LDFLAGS)
 
 bin_PROGRAMS = pcre4msc2 pcre4msc3
 

@@ -16,7 +16,7 @@
 
 #define OVECCOUNT 900
 
-void debugvalue(int debuglevel, std::string label, std::string value);
+void debugvalue(int debuglevel, const std::string& label, const std::string& value);
 
 class SMatch {
  public:
@@ -64,33 +64,33 @@ class RegexBase {
     virtual bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const = 0;
 };
 
+#ifdef WITH_OLD_PCRE
 class Regex: public RegexBase {
  public:
     explicit Regex(const std::string& pattern_, int debuglevel);
-    ~Regex();
+    ~Regex() override;
 
-    std::list<SMatch> searchAll(const std::string& s);
-    bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const;
+    std::list<SMatch> searchAll(const std::string& s) override;
+    bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const override;
 
  private:
     pcre *m_pc = NULL;
     pcre_extra *m_pce = NULL;
 };
-
-#ifdef HAVE_PCRE2
+#endif
 
 class Regexv2: public RegexBase {
  public:
     explicit Regexv2(const std::string& pattern_, int debuglevel);
-    ~Regexv2();
+    ~Regexv2() override;
 
-    std::list<SMatch> searchAll(const std::string& s);
-    bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const;
+    std::list<SMatch> searchAll(const std::string& s) override;
+    bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const override;
 
  private:
     pcre2_code *m_pc;
     pcre2_match_data *m_match_data;
+    int m_pcje;
 };
-#endif  // HAVE_PCRE2
 
 #endif  // SRC_UTILS_REGEX_H_

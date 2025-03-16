@@ -1,1 +1,1 @@
-(?i)[\s'\"`()]*?\b([\d\w]+)\b[\s'\"`()]*?(?:(?:sounds\s+)?like|r(?:egexp|like)|<=>|=)[\s'\"`()]*?\b([\d\w]+)\b
+(?i)[\s\x0b\"'-\)`]*?\b([0-9A-Z_a-z]+)\b[\s\x0b\"'-\)`]*?(?:=|<=>|(?:sounds[\s\x0b]+)?like|glob|r(?:like|egexp))[\s\x0b\"'-\)`]*?\b([0-9A-Z_a-z]+)\b
