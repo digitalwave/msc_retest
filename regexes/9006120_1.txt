@@ -1,1 +1,0 @@
-/(?:conversations/add(?:-preview)?|conversations/messages/\d+/edit|posts/\d+/(?:edit|preview)|(?:conversations|threads)/.*\.\d+/(?:add-reply|reply-preview)|forums/.*/(?:post-thread|thread-preview))$

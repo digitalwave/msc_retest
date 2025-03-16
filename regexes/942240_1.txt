@@ -1,1 +1,1 @@
-(?i)(?:[\"'`](?:;*?\s*?waitfor\s+(?:delay|time)\s+[\"'`]|;.*?:\s*?goto)|alter\s*?\w+.*?cha(?:racte)?r\s+set\s+\w+)
+(?i)alter[\s\x0b]*?[0-9A-Z_a-z]+.*?char(?:acter)?[\s\x0b]+set[\s\x0b]+[0-9A-Z_a-z]+|[\"'`](?:;*?[\s\x0b]*?waitfor[\s\x0b]+(?:time|delay)[\s\x0b]+[\"'`]|;.*?:[\s\x0b]*?goto)

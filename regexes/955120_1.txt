@@ -1,1 +1,1 @@
-^<html><head><meta http-equiv='Content-Type' content='text/html; charset=Windows-1251'><title>.*? - WSO [0-9.]+</title>
+^<html><head><meta http-equiv='Content-Type' content='text/html; charset=(?:Windows-1251|UTF-8)?'><title>.*?(?: -)? W[Ss][Oo] [0-9.]+</title>

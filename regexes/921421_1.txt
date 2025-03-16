@@ -1,0 +1,1 @@
+^[^\s\x0b,;]+[\s\x0b,;].*?(?:application/(?:.+\+)?json|(?:application/(?:soap\+)?|text/)xml)

@@ -18,7 +18,7 @@
 #define OVECCOUNT 30    /* should be a multiple of 3 */
 #define FILESIZEMAX 131072
 
-void showhelp(char * name) {
+void showhelp(const char * name) {
     printf("Use: %s [OPTIONS] patternfile subjectfile\n\n", name);
     printf("You can pass subject through stdin, just give the '-' as subjectfile or leave it.\n\n");
     printf("OPTIONS:\n");
@@ -34,6 +34,9 @@ void showhelp(char * name) {
 #ifdef PCRE_EXTRA_MATCH_LIMIT_RECURSION
     printf("\t-r R\tSet value R for the pcre_match_limit_recursion for pcre_extra. Default value is 1000.\n");
 #endif
+#ifdef WITH_OLD_PCRE
+    printf("\t-1  \tuse OLD PCRE engine.\n");
+#endif
     printf("\t-t T\tExpects a float value; if the (last) pcre_exec time is greater than this,\n");
     printf("\t    \tthe exit status of program will non-zero.\n");
     printf("\t-d  \tShow detailed information.\n");
@@ -46,12 +49,13 @@ void showhelp(char * name) {
  * FOO:
  * ====
  */
-void debuglabel(int debuglevel, char * label) {
+void debuglabel(int debuglevel, const char * label) {
     if (debuglevel == 1) {
         int len = (int)strlen(label)+1; // +1 -> append ":"
         char * line = calloc(sizeof(char), len+2);
         if (line == NULL) {
             fprintf(stderr, "Failed to calloc temp str.");
+            return;
         }
         for(int i = 0; i < len; i++) {
             strcat(line, "=");
@@ -65,7 +69,7 @@ void debuglabel(int debuglevel, char * label) {
 /*
  * show debug info with string argument
  */
-void debugstr(int debuglevel, char * label, char * value) {
+void debugstr(int debuglevel, const char * label, const char * value) {
     if (debuglevel == 1) {
         debuglabel(debuglevel, label);
         printf("%s\n", value);
@@ -75,7 +79,7 @@ void debugstr(int debuglevel, char * label, char * value) {
 /*
  * show debug info with int argument
  */
-void debugint(int debuglevel, char * label, int value) {
+void debugint(int debuglevel, const char * label, int value) {
     if (debuglevel == 1) {
         debuglabel(debuglevel, label);
         printf("%d\n", value);
@@ -117,7 +121,7 @@ static char *strip_slashes(const char *start, int len) {
 
     for (i = 0; i < len; ++i) {
         if (start[i] == '\\' && (start[i + 1] == '\\'
-                                 || (quote && start[i + 1] == quote)))
+                                 || (start[i + 1] == quote)))
             *resp++ = start[++i];
         else
             *resp++ = start[i];
@@ -128,16 +132,20 @@ static char *strip_slashes(const char *start, int len) {
 }
 
 int main(int argc, char **argv) {
-    pcre *re;
+#ifdef WITH_OLD_PCRE
+    pcre *re = NULL;
     pcre_extra *pce = NULL;
+#endif
     const char *error;
     char pattern[FILESIZEMAX+1] = "";
     char *escaped_pattern;
     char subject[FILESIZEMAX+1] = "";
     int erroffset;
+    size_t sterroffset;
     int ovector[OVECCOUNT];
     int subject_length;
-    int rc = 0, i, icnt = 1, pijit;
+    int rc = 0, i, icnt = 1;
+    int pijit; // cppcheck-suppress unusedVariable
     char rcerror[100];
     char c;
     int ci;
@@ -145,50 +153,53 @@ int main(int argc, char **argv) {
     int use_study = 1;
     int match_limit = 1000;
     int match_limit_recursion = 1000;
+    int match_limit_set = 0;
+    int match_limit_recursion_set = 0;
     float time_limit = 0.0;
     int debuglevel = 0;
     char stdinname[] = "-";
+    int use_old_pcre = 0;
+
+    pcre2_code *pcre2;
+    int error_number = 0;
+    pcre2_match_context *match_context = NULL;
+    int jit_compile_rc = 0; // cppcheck-suppress unreadVariable
+
 
     FILE *fp;
     const char * patternfile = NULL, * subjectfile = NULL;
-    //struct timeval tval_before, tval_after, tval_result;
     struct timespec ts_before, ts_after, ts_diff;
     long double *ld_diffs = NULL;
-
-    //tval_result.tv_sec = 0;
-    //tval_result.tv_usec = 0;
 
     if (argc < 2) {
       showhelp(argv[0]);
       return EXIT_FAILURE;
     }
 
-    while ((c = getopt (argc, argv, "hjm:r:sn:t:d")) != -1) {
+    while ((c = getopt (argc, argv, "hjm:r:sn:t:d1")) != -1) {
         switch (c) {
             case 'h':
                 showhelp(argv[0]);
                 return EXIT_SUCCESS;
-#ifdef PCRE_CONFIG_JIT
             case 'j':
                 use_jit = 1;
                 break;
-#endif
-#ifdef PCRE_EXTRA_MATCH_LIMIT
             case 'm':
                 match_limit = atoi(optarg);
                 if (match_limit < 0 || icnt > 100000) {
                     fprintf(stderr, "Ohh... Try to pass for '-m' an integer between 0 and 100000\n");
                     return EXIT_FAILURE;
                 }
-#endif
-#ifdef PCRE_EXTRA_MATCH_LIMIT_RECURSION
+                match_limit_set = 1;
+                break;
             case 'r':
                 match_limit_recursion = atoi(optarg);
                 if (match_limit_recursion < 0 || icnt > 100000) {
                     fprintf(stderr, "Ohh... Try to pass for '-r' an integer between 0 and 100000\n");
                     return EXIT_FAILURE;
                 }
-#endif
+                match_limit_recursion_set = 1;
+                break;
             case 's':
                 use_study = 0;
                 break;
@@ -209,6 +220,15 @@ int main(int argc, char **argv) {
             case 'd':
                 debuglevel = 1;
                 break;
+#ifdef WITH_OLD_PCRE
+            case '1':
+                use_old_pcre = 1;
+                break;
+#else
+            case '1':
+                fprintf(stderr, "OLD PCRE engine is not available.\n");
+                return EXIT_FAILURE;
+#endif
             case '?':
                 if (optopt == 'n' || optopt == 'm' || optopt == 'r' || optopt == 't') {
                     fprintf (stderr, "Option -%c requires an argument.\n", optopt);
@@ -243,6 +263,31 @@ int main(int argc, char **argv) {
     if (patternfile == NULL) {
         showhelp(argv[0]);
         return EXIT_FAILURE;
+    }
+
+    if (use_old_pcre == 1) {
+        debugstr(debuglevel, "PCRE", "OLD");
+#ifndef PCRE_CONFIG_JIT
+        if (use_jit == 1) {
+            fprintf(stderr, "JIT is not available in old PCRE\n");
+            return EXIT_FAILURE;
+        }
+#endif
+#ifndef PCRE_EXTRA_MATCH_LIMIT
+        if (match_limit_set == 1) {
+            fprintf(stderr, "Match limit is not available in old PCRE\n");
+            return EXIT_FAILURE;
+        }
+#endif
+#ifndef PCRE_EXTRA_MATCH_LIMIT_RECURSION
+        if (match_limit_recursion_set == 1) {
+            fprintf(stderr, "Match limit recursion is not available in old PCRE\n");
+            return EXIT_FAILURE;
+        }
+#endif
+    }
+    else {
+        debugstr(debuglevel, "PCRE", "NEW");
     }
 
     if (icnt > 1) {
@@ -308,100 +353,218 @@ int main(int argc, char **argv) {
     debugstr(debuglevel, "ESCAPED pattern", escaped_pattern);
     debugstr(debuglevel, "SUBJECT", subject);
 
-    re = pcre_compile(
-        escaped_pattern,      /* the pattern */
-        PCRE_DOTALL | PCRE_DOLLAR_ENDONLY, /* options from re_operators */
-        &error,               /* for error message */
-        &erroffset,           /* for error offset */
-        NULL                  /* use default character tables */
-    );
+#ifdef WITH_OLD_PCRE
+    if (use_old_pcre == 1) {
+        re = pcre_compile(
+            escaped_pattern,      /* the pattern */
+            PCRE_DOTALL | PCRE_DOLLAR_ENDONLY, /* options from re_operators */
+            &error,               /* for error message */
+            &erroffset,           /* for error offset */
+            NULL                  /* use default character tables */
+        );
 
-    if (re == NULL) {
-        fprintf(stderr, "PCRE compilation failed at offset %d: %s\n", erroffset, error);
-        fprintf(stderr, "Stripped regex: '%s'\n", escaped_pattern);
-        return EXIT_FAILURE;
-    }
-
-#ifdef PCRE_CONFIG_JIT
-    if (use_jit == 1) {
-        pce = pcre_study(re, PCRE_STUDY_JIT_COMPILE, &error);
-        debugstr(debuglevel, "JIT", "available and enabled");
-        debugstr(debuglevel, "STUDY", "enabled");
-    }
-    else {
-        if (use_study == 1) {
-            pce = pcre_study(re, 0, &error);
-            debugstr(debuglevel, "JIT", "available but disabled");
-            debugstr(debuglevel, "STUDY", "enabled");
-        }
-    }
-#else
-    if (use_study == 1) {
-        pce = pcre_study(re, 0, &error);
-        debugstr(debuglevel, "STUDY", "enabled");
-    }
-    else {
-        debugstr(debuglevel, "STUDY", "disabled");
-    }
-#endif
-
-    if (pce == NULL) {
-        pce = calloc(1, sizeof(pcre_extra));
-        if (pce == NULL) {
-            fprintf(stderr, "Calloc failure for `pce`.\n");
+        if (re == NULL) {
+            fprintf(stderr, "PCRE compilation failed at offset %d: %s\n", erroffset, error);
+            fprintf(stderr, "Stripped regex: '%s'\n", escaped_pattern);
             return EXIT_FAILURE;
         }
-    }
+
+#ifdef PCRE_CONFIG_JIT
+        if (use_jit == 1) {
+            pce = pcre_study(re, PCRE_STUDY_JIT_COMPILE, &error);
+            debugstr(debuglevel, "JIT", "available and enabled");
+            debugstr(debuglevel, "STUDY", "enabled");
+        }
+        else {
+            if (use_study == 1) {
+                pce = pcre_study(re, 0, &error);
+                debugstr(debuglevel, "JIT", "available but disabled");
+                debugstr(debuglevel, "STUDY", "enabled");
+            }
+        }
+#else
+        if (use_study == 1) {
+            pce = pcre_study(re, 0, &error);
+            debugstr(debuglevel, "STUDY", "enabled");
+        }
+        else {
+            debugstr(debuglevel, "STUDY", "disabled");
+        }
+#endif
+
+        if (pce == NULL) {
+            pce = calloc(1, sizeof(pcre_extra));
+            if (pce == NULL) {
+                fprintf(stderr, "Calloc failure for `pce`.\n");
+                return EXIT_FAILURE;
+            }
+        }
 
 #ifdef PCRE_EXTRA_MATCH_LIMIT
-    if (match_limit > 0) {
-        pce->match_limit = match_limit;
-        pce->flags |= PCRE_EXTRA_MATCH_LIMIT;
-        debugint(debuglevel, "MATCH LIMIT", match_limit);
-    }
+        if (match_limit > 0) {
+            pce->match_limit = match_limit;
+            pce->flags |= PCRE_EXTRA_MATCH_LIMIT;
+            debugint(debuglevel, "MATCH LIMIT", match_limit);
+        }
 #endif
 #ifdef PCRE_EXTRA_MATCH_LIMIT_RECURSION
-    if (match_limit_recursion > 0) {
-        pce->match_limit_recursion = match_limit_recursion;
-        pce->flags |= PCRE_EXTRA_MATCH_LIMIT_RECURSION;
-        debugint(debuglevel, "MATCH LIMIT RECURSION", match_limit_recursion);
-    }
+        if (match_limit_recursion > 0) {
+            pce->match_limit_recursion = match_limit_recursion;
+            pce->flags |= PCRE_EXTRA_MATCH_LIMIT_RECURSION;
+            debugint(debuglevel, "MATCH LIMIT RECURSION", match_limit_recursion);
+        }
 #endif
 
 #ifdef PCRE_CONFIG_JIT
-    if (use_jit == 1) {
-        rc = pcre_fullinfo(re, pce, PCRE_INFO_JIT, &pijit);
-        if ((rc != 0) || (pijit != 1)) {
-            fprintf(stderr, "Regex does not support JIT (%d)\n", rc);
+        if (use_jit == 1) {
+            rc = pcre_fullinfo(re, pce, PCRE_INFO_JIT, &pijit);
+            if ((rc != 0) || (pijit != 1)) {
+                fprintf(stderr, "Regex does not support JIT (%d)\n", rc);
+            }
         }
-    }
 #endif
+    }  // end of use_old_pcre
+#endif // end of WITH_OLD_PCRE
+
+    if (use_old_pcre == 0) {
+
+        pcre2 = pcre2_compile(
+            (const unsigned char *)escaped_pattern,
+            PCRE2_ZERO_TERMINATED,
+            PCRE_DOTALL | PCRE_DOLLAR_ENDONLY, /* options from re_operators */
+            &error_number,
+            &sterroffset,
+            NULL
+        );
+        if (pcre2 == NULL) {
+            PCRE2_UCHAR buffer[256];
+            pcre2_get_error_message(error_number, buffer, sizeof(buffer));
+            fprintf(stderr, "PCRE2 compilation failed: %s\n", buffer);
+            fprintf(stderr, "Stripped regex: '%s'\n", escaped_pattern);
+            return EXIT_FAILURE;
+        }
+
+    #ifdef PCRE2_CONFIG_JIT
+        jit_compile_rc = pcre2_jit_compile(pcre2, PCRE2_JIT_COMPLETE);
+    #endif
+
+        /* Setup the pcre2 match context */
+        match_context = pcre2_match_context_create(NULL);
+        if (match_context == NULL) {
+            fprintf(stderr, "PCRE2 match context creation failed.\n");
+            return EXIT_FAILURE;
+        }
+
+        pcre2_set_match_limit(match_context, match_limit);
+        pcre2_set_depth_limit(match_context, match_limit_recursion);
+    }
+
 
     rc = 0; // initialize for debug level...
+    ts_diff.tv_sec  = 0;
+    ts_diff.tv_nsec = 0;
 
     for(i=0; i<icnt; i++) {
         ts_diff.tv_sec  = 0;
         ts_diff.tv_nsec = 0;
 
-        //gettimeofday(&tval_before, NULL);
         clock_gettime(CLOCK_REALTIME, &ts_before);
-        rc = pcre_exec(
-            re,                   /* the compiled pattern */
-            pce,                  /* no extra data - we didn't study the pattern */
-            subject,              /* the subject string */
-            subject_length,       /* the length of the subject */
-            0,                    /* start at offset 0 in the subject */
-            0,                    /* default options */
-            ovector,              /* output vector for substring information */
-            OVECCOUNT             /* number of elements in the output vector */
-        );
-        //gettimeofday(&tval_after, NULL);
+#ifdef WITH_OLD_PCRE
+        if (use_old_pcre == 1) {
+            rc = pcre_exec(
+                re,                   /* the compiled pattern */
+                pce,                  /* no extra data - we didn't study the pattern */
+                subject,              /* the subject string */
+                subject_length,       /* the length of the subject */
+                0,                    /* start at offset 0 in the subject */
+                0,                    /* default options */
+                ovector,              /* output vector for substring information */
+                OVECCOUNT             /* number of elements in the output vector */
+            );
+        }
+        else {
+#endif
+            PCRE2_SPTR pcre2_s;
+            pcre2_match_data *match_data;
+            const PCRE2_SIZE *pcre2_ovector = NULL;
+            PCRE2_SIZE startoffset = 0;
+
+            pcre2_s = (PCRE2_SPTR)subject;
+            match_data = pcre2_match_data_create_from_pattern(pcre2, NULL);
+
+#ifdef PCRE2_CONFIG_JIT
+            if (use_jit == 1) {
+                if (jit_compile_rc == 0) {
+                    rc = pcre2_jit_match(
+                        pcre2,
+                        pcre2_s,
+                        subject_length,
+                        (PCRE2_SIZE)(startoffset),
+                        PCRE2_NOTEMPTY, /* options from re_operators */
+                        match_data,
+                        match_context
+                    );
+                    if (rc == PCRE2_ERROR_JIT_STACKLIMIT) {
+                        rc = pcre2_match(
+                            pcre2,
+                            pcre2_s,
+                            subject_length,
+                            (PCRE2_SIZE)(startoffset),
+                            (PCRE2_NO_JIT | (PCRE_DOTALL | PCRE_DOLLAR_ENDONLY)),
+                            match_data,
+                            match_context
+                        );
+                    }
+                }
+                else {
+                    fprintf(stderr, "JIT wanted but failed to use it.\n");
+                    return EXIT_FAILURE;
+                }
+            }
+            else {
+                rc = pcre2_match(
+                    pcre2,
+                    pcre2_s,
+                    subject_length,
+                    (PCRE2_SIZE)(startoffset),
+                    PCRE_DOTALL | PCRE_DOLLAR_ENDONLY, /* options from re_operators */
+                    match_data,
+                    match_context
+                );
+            }
+#else
+            rc = pcre2_match(
+                pcre2,
+                pcre2_s,
+                subject_length,
+                (PCRE2_SIZE)(startoffset),
+                PCRE_DOTALL | PCRE_DOLLAR_ENDONLY, /* options from re_operators */
+                match_data,
+                match_context
+            );
+#endif
+            PCRE2_SIZE ovecsize = 0; // cppcheck-suppress unreadVariable
+            if (match_data != NULL) {
+                pcre2_ovector = pcre2_get_ovector_pointer(match_data);
+                 ovecsize = pcre2_get_ovector_count(match_data);
+                if (pcre2_ovector != NULL) {
+                    for (int k = 0; ((k < rc) && ((k*2) <= ovecsize)); k++) {
+                        if ((k*2) < ovecsize) {
+                            ovector[2*k] = pcre2_ovector[2*k];
+                            ovector[2*k+1] = pcre2_ovector[2*k+1];
+                        }
+                    }
+                }
+                pcre2_match_data_free(match_data);
+            }
+#ifdef WITH_OLD_PCRE
+        }
+#endif // WITH_OLD_PCRE
+
         clock_gettime(CLOCK_REALTIME, &ts_after);
-        //timersub(&tval_after, &tval_before, &tval_result);
         timespec_diff(&ts_after, &ts_before, &ts_diff);
-        translate_error(rc, rcerror);
+        translate_error(use_old_pcre, rc, rcerror);
         debuglabel(debuglevel, "RESULT");
-        // printf("%s - time elapsed: %ld.%06ld, match value: %s\n", patternfile, (long int)tval_result.tv_sec, (long int)tval_result.tv_usec, rcerror);
         printf("%s - time elapsed: %ld.%09ld, match value: %s\n", patternfile, (long int)ts_diff.tv_sec, (long int)ts_diff.tv_nsec, rcerror);
         if (icnt > 1) {
             ld_diffs[i] = ts_diff.tv_sec + (ts_diff.tv_nsec/1000000000.0);
@@ -431,9 +594,9 @@ int main(int argc, char **argv) {
 
             // "suffix" - the last part of subject if the last match left pos is lt length of subject
             if (ovector[2*ci+1] < strlen(subject)) {
-                char * tstr = strndup(subject + ovector[2*ci+1], strlen(subject) - ovector[2*ci+1]);
-                printf("%s", tstr);
-                free(tstr);
+                char * tstr2 = strndup(subject + ovector[2*ci+1], strlen(subject) - ovector[2*ci+1]);
+                printf("%s", tstr2);
+                free(tstr2);
             }
             printf("\n");
         }
@@ -451,10 +614,22 @@ int main(int argc, char **argv) {
         free(ld_diffs);
     }
 
-    pcre_free(re);
-    if (pce != NULL) {
-        pcre_free(pce);
+#ifdef WITH_OLD_PCRE
+    if (use_old_pcre == 1) {
+        pcre_free(re);
+        if (pce != NULL) {
+            pcre_free(pce);
+        }
     }
+    else {
+#endif
+        pcre2_match_context_free(match_context);
+        match_context = NULL;
+        pcre2_code_free(pcre2);
+        pcre2 = NULL;
+#ifdef WITH_OLD_PCRE
+    }
+#endif
     if (escaped_pattern != NULL) {
         free(escaped_pattern);
     }

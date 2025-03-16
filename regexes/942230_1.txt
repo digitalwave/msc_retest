@@ -1,1 +1,1 @@
-(?i)(?:select.*?having\s*?[^\s]+\s*?[^\w\s]|[\s()]case\s+when.*?then|if\s?\(\w+\s*?[=<>~]|\)\s*?like\s*?\()
+(?i)[\s\x0b\(\)]case[\s\x0b]+when.*?then|\)[\s\x0b]*?like[\s\x0b]*?\(|select.*?having[\s\x0b]*?[^\s\x0b]+[\s\x0b]*?[^\s\x0b0-9A-Z_a-z]|if[\s\x0b]?\([0-9A-Z_a-z]+[\s\x0b]*?[<->~]

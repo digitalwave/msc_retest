@@ -1,1 +1,0 @@
-/(?:account/avatar|attachments/upload)$

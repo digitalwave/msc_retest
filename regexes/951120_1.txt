@@ -1,1 +1,1 @@
-(?i:ORA-[0-9][0-9][0-9][0-9]|java\.sql\.SQLException|Oracle error|Oracle.*Driver|Warning.*oci_.*|Warning.*ora_.*)
+(?i)\bORA-[0-9][0-9][0-9][0-9][0-9]:|java\.sql\.SQLException|Oracle(?: erro|[^\(\)]{0,20}Drive)r|Warning.{1,10}o(?:ci_.{1,30}|ra_.{1,20})

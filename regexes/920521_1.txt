@@ -1,1 +1,1 @@
-(?:x-(?:compress|gzip)|(?:pack200-)?gzip|aes128gcm|compress|identity|deflate|zstd|exi|^$|br|\*)
+br|compress|deflate|(?:pack200-)?gzip|identity|\*|^$|aes128gcm|exi|zstd|x-(?:compress|gzip)

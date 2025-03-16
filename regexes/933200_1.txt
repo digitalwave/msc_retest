@@ -1,1 +1,1 @@
-(?i:zlib|glob|phar|ssh2|rar|ogg|expect|zip)://
+(?:bzip2|expect|glob|ogg|(?:ph|r)ar|ssh2(?:.(?:s(?:hell|(?:ft|c)p)|exec|tunnel))?|z(?:ip|lib))://

@@ -1,1 +1,0 @@
-(?:/doku.php|/lib/exe/ajax.php)$

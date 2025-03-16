@@ -1,1 +1,1 @@
-(?i)(?:[\"'`]\s*?(?:(?:n(?:and|ot)|(?:x?x)?or|between|\|\||and|div|&&)\s+[\s\w]+=\s*?\w+\s*?having\s+|like(?:\s+[\s\w]+=\s*?\w+\s*?having\s+|\W*?[\"'`\d]))|select\s+?[\[\]()\s\w\.,\"'`-]+from\s+|\w\s+like\s+[\"'`]|like\s*?[\"'`]%)
+(?i)[\"'`][\s\x0b]*?(?:(?:and|n(?:and|ot)|(?:xx?)?or|div|like|between|\|\||&&)[\s\x0b]+[\s\x0b0-9A-Z_a-z]+=[\s\x0b]*?[0-9A-Z_a-z]+[\s\x0b]*?having[\s\x0b]+|like[^0-9A-Z_a-z]*?[\"'0-9`])|[0-9A-Z_a-z][\s\x0b]+like[\s\x0b]+[\"'`]|like[\s\x0b]*?[\"'`]%|select[\s\x0b]+?[\s\x0b\"'-\),-\.0-9A-\[\]_-z]+from[\s\x0b]+

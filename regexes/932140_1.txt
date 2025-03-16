@@ -1,1 +1,1 @@
-\b(?:if(?:/i)?(?: not)?(?: exist\b| defined\b| errorlevel\b| cmdextversion\b|(?: |\().*(?:\bgeq\b|\bequ\b|\bneq\b|\bleq\b|\bgtr\b|\blss\b|==))|for(?:/[dflr].*)? %+[^ ]+ in\(.*\)\s?do)
+\b(?:for(?:/[dflr].*)? %+[^ ]+ in\(.*\)[\s\x0b]?do|if(?:/i)?(?: not)?(?: (?:e(?:xist|rrorlevel)|defined|cmdextversion)\b|[ \(].*(?:\b(?:g(?:eq|tr)|equ|neq|l(?:eq|ss))\b|==)))

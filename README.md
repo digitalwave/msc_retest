@@ -5,20 +5,20 @@ Welcome to the `msc_retest` documentation.
 Description
 ===========
 
-This tool compiles two binaries: `pcre4msc2` and `pcre4msc3`. The binaries emulates the behaviors of regex engine (PCRE - the old version) in mod_security2 (Apache module) and the libmodsecurity3. With this programs, you can check the evaluation time and result of every regular expressions with any random (including very extreme long) input. Both of them (regex pattern, input subject) needs to exists in two separated files, and you can pass them as argument. Subject can be passed through stdin, if you give '-' for subject file, eg:
+This tool compiles two binaries: `pcre4msc2` and `pcre4msc3`. The binaries emulates the behaviors of regex engines (both PCRE2 - the **NEW** - and PCRE3  - the old - versions) in mod_security2 (Apache module) and the libmodsecurity3. Please note, that the default PCRE engine is **PCRE2**. If you want to use the old PCRE engine, you should pass `-1` option to the tool. With these programs, you can check the evaluation time and result of every regular expressions with any random (including very extreme long) input. Both of them (regex pattern, input subject) needs to exists in two separated files, and you can pass them as argument. Subject can be passed through stdin, if you give '-' for subject file, eg:
 
 ```bash
-echo "arg=../../../etc/passwd&foo=var" | src/pcre4msc2 regexes/930110_1.txt -
+echo -n "arg=../../../etc/passwd&foo=var" | src/pcre4msc2 regexes/930110_1.txt -
 regexes/930110_1.txt - time elapsed: 0.000011753, match value: SUBJECT MATCHED 1 TIME
 ```
 or just simple leave it:
 
 ```bash
-echo "arg=../../../etc/passwd&foo=var" | src/pcre4msc3 regexes/930110_1.txt
+echo -n "arg=../../../etc/passwd&foo=var" | src/pcre4msc3 regexes/930110_1.txt
 regexes/930110_1.txt - time elapsed: 0.000006, match value: SUBJECT MATCHED 1 TIME
 ```
 
-The source tree contains some extra directories: under the `data/` you can find all of the regular expressions, what CRS uses. The files contains the id of the rule, and a suffix (there are some chained rules, where more parts uses `@rx`).
+The source tree contains some extra directories: under the `regexes/` you can find all of the regular expressions, what CRS uses. The files contains the id of the rule, and a suffix (there are some chained rules, where more parts uses `@rx`).
 
 The `utils/` directory contains a python tool, which helps to re-generate the regex's above. It uses `msc_pyparser` - for more information, see the README.md in that directory.
 
@@ -33,7 +33,7 @@ Parsing:
 * mod_security2 is an Apache module, so it uses the available functions, including parsing of configuration files. Apache config parser strips the extra `\` (backslash) characters and escaped " if it is inside of quoted string. Eg. if the rule in the config contains a sub-string like `\\\\'`, then it will evaluated as `\\'`, if there is a pattern `\"` in a quoted string, then it will be `"`.
 * libmodsecurity3 uses an own parser, and it doesn't make any strip methods. But it does if the rule defined in the configuration file of the web server.
 
-This mean if the rule has been read from the external file (like CRS), that will not be stripped, but if there is an inline rule (see [this](https://github.com/SpiderLabs/ModSecurity-nginx#modsecurity_rules)), then it will.
+This mean if the rule has been read from the external file (like CRS), that will not be stripped, but if there is an inline rule (see [this](https://github.com/owasp-modsecurity/ModSecurity-nginx#modsecurity_rules)), then it will.
 
 This strip function is implemented in `pcre4msc2` code itself.
 
@@ -42,6 +42,7 @@ pcre_study(), JIT
 
 * mod_security2 module uses `pcre_study()` if it's available, but **you can disable** it (with `--enable-pcre-study=no`)
 * mod_security2 module uses `PCRE_JIT` if it's available **and you enabled it in build time** (with `--enable-pcre-jit`)
+* in case of `pcre4msc2` (which emulates mod_security2) you can force JIT with `-j`, it it's available
 * libmodsecurity3 uses `pcre_study()` by default, and you **can't disable** it
 * libmodsecurity3 uses `PCRE_JIT` if it supported by the pcre library, **there isn't any option** to tune the engine
 
@@ -64,72 +65,10 @@ Both versions uses a precompiled value, mod_security2 uses 30, libmodsecurity3 u
 
 These information are very important to understand, why and how works the tools.
 
-Other notes - outdated
-----------------------
-
-The libmodsecurity3 `@rx` implementation had some design errors (which are now [fixed](https://github.com/SpiderLabs/ModSecurity/pull/2348)): the `searchAll()` method (which is same here as the original code) always collected the captured sub-strings from subject - this could be make slower the operator. The another thing was there was no limit: if the subject contained the pattern (for example) 100 times, then it collected all of them, so this could be lead to high memory usage (of course it depends on pattern and subject - but the collection will stores only the first 10 matches: from TX.0 to TX.9). Another problem was that this method was used for many other places, not just the `@rx` operator, eg. variables, transformations... `pcre4msc3` contains the fixed version, but you can allow the old method with `-f` argument. This argument works only with `pcre4msc3` tool.
-
-In case of mod_security2, the engine doesn't collects all matches, only the first one.
-
-Here is a small summary, how can you check:
-
- * create a rule, for eg. in the `REQUEST-901-INITIALIZATION.conf`:
-   ```
-   SecRule ARGS|ARGS_NAMES "@rx (?:is)" \
-     "id:800003,\
-     phase:2,\
-     t:none,\
-     pass,\
-     capture,\
-     msg:'%{TX.0}, %{TX.1}, %{TX.2}, %{TX.3}, %{TX.4}, %{TX.5}, %{TX.6}, %{TX.7}, %{TX.8}, %{TX.9}'"
-
-   ```
- * send a request to the HTTP server:
-   ```
-   curl -v 'http://localhost/?foo=this%20is%20what%20is%20this
-   ```
-   note, the argument `foo` contains the value 'this is what is this', and the pattern in the rule is 'is'. The number of expected values is 4.
-
-Let's see the logs:
- * Apache (mod_security2):
-   ```
-   ModSecurity: Warning. Pattern match "(?:is)" at ARGS:foo. [file "/usr/share/modsecurity-crs/rules/REQUEST-901-INITIALIZATION.conf"] [line "456"] [id "800003"] [msg "is, , , , , , , , , "] [hostname "localhost"] [uri "/"] [unique_id "XonUavaOEga8L3onA0ZYBAAAAAA"]
-   ```
- * Nginx (libmodsecurity3 - before the [fix](https://github.com/SpiderLabs/ModSecurity/pull/2348)):
-   ```
-   ModSecurity: Warning. Matched "Operator `Rx' with parameter `(?:is)' against variable `ARGS:foo' (Value: `this is what is this' ) [file "/usr/share/modsecurity-crs/rules/REQUEST-901-INITIALIZATION.conf"] [line "447"] [id "800003"] [rev ""] [msg "is, is, is, is, , , , , , "] [data ""] [severity "0"] [ver ""] [maturity "0"] [accuracy "0"] [hostname "0.0.0.0"] [uri "/"] [unique_id "158609110136.080640"] [ref "o2,2o5,2o13,2o18,2v10,20"], client: ::1, server: _, request: "GET /?foo=this%20is%20what%20is%20this HTTP/1.1", host: "localhost"
-   ```
-
-As you can see, the `libmodsecurity3` produced the expected result, `mod_security2` doesn't. Try to increase the number if "is" patterns in your query, eg:
-
-```
-curl -v 'http://localhost/?foo=this%20is%20what%20is%20this%20is%20is%20is...%20is'
-```
-and check the `modsec_debug.log`. As you can see the result is what I described above, `libmodsecurity3` old version collects all occurrence of matches:
-```
-Added regex subexpression TX.0: is
-Added regex subexpression TX.1: is
-Added regex subexpression TX.2: is
-Added regex subexpression TX.3: is
-Added regex subexpression TX.4: is
-Added regex subexpression TX.5: is
-Added regex subexpression TX.6: is
-Added regex subexpression TX.7: is
-Added regex subexpression TX.8: is
-Added regex subexpression TX.9: is
-Added regex subexpression TX.10: is
-Added regex subexpression TX.11: is
-Added regex subexpression TX.12: is
-```
-but only the first 10 has logged. In case of `mod_security2`, you will see only one line:
-```
-Added regex subexpression to TX.0: is
-```
-
 Requirements
 ============
 
-To compile the code you need the pcre library (eg. `libpcre3-dev` package on Debian - this is the old version), and the autotools. `libmodsecurity3` supports `pcre2` too, so `pcre4msc3` supports `pcre2` engine too, if `libpcre2-dev` is available.
+To compile the code you need the pcre2 library (`libpcre2-dev` package on Debian - this is the new version), and the autotools. You can add the old engine too, then you need `libpcre3-dev`, and tell to `configure` script that you want to use it: `./configure --with-old-pcre`.
 
 Build
 =====
@@ -138,11 +77,11 @@ Download and unpack the source, and
 
 ```
 autoreconf --install
-./configure
+./configure --with-old-pcre
 make
 ```
 
-To disable `pcre2` support for `pcre4msc3`, pass the argument `--without-pcre2` to `./configure` script.
+Please note that you can't disable `pcre2` support.
 
 Use
 ===
@@ -150,11 +89,12 @@ Use
 A quick how to:
 
 ```bash
-echo "this is what is this" > subject.txt
-echo "(?:is)" > pattern.txt
+echo -n "this is what is this" > subject.txt
+echo -n "(?:is)" > pattern.txt
 src/pcre4msc2 pattern.txt subject.txt
 pattern.txt - time elapsed: 0.000017264, match value: SUBJECT MATCHED 1 TIME
 ```
+Please note that `-n` option above supresses the `\n` character at the end of the lines.
 
 This means the subject matched with the regex, and the time taken 0.000017264 sec (17.264 usec = 17 264 nanosecs).
 
@@ -201,8 +141,7 @@ Based on the [information](#Useful%20information':ignore') above, now let's see 
 |   `-r` | yes              | match lim. rec.  |     supported | not supported |
 |   `-t` | yes              | exec. time lim.  |     supported |     supported |
 |   `-d` | no               | show details     |     supported |     supported |
-|   `-f` | no               | force alt. meth. | not supported |     supported |
-|   `-2` | no               | use pcre2 if av. | not supported |     supported |
+|   `-1` | no               | use pcre3 if av. |     supported |     supported |
 
 and `-h` of course.
 
@@ -317,8 +256,8 @@ src/pcre4msc2 -m 4000 -r 4000 path/to/pattern path/to/subject
 
 [See the difference between the modsec_v2 **without** JIT, modsec v2 **with** JIT, modsec v3, and old modsec v3 matches algorithm](#diff-between-methods)
 ```bash
-echo "this is what is this" > subject.txt
-echo "(?:is)" > pattern.txt
+echo -n "this is what is this" > subject.txt
+echo -n "(?:is)" > pattern.txt
 # v2
 src/pcre4msc2 pattern.txt subject.txt
 pattern.txt - time elapsed: 0.000015, match value: SUBJECT MATCHED 1 TIME
@@ -338,6 +277,10 @@ Of course, for a more precision result you have to run the tests with `-n 10`, o
 **Show the details with created files above (pattern.txt, subject.txt)***
 ```bash
 src/pcre4msc2 -d pattern.txt subject.txt
+
+PCRE
+====
+NEW
 
 RAW pattern:
 ============
@@ -385,8 +328,12 @@ where the firs is printed with green color.
 
 **Show the details with pattern what contains escape***
 ```bash
-echo "\"//onerror=\"" > subject2.txt
+echo -n "\"//onerror=\"" > subject2.txt
 src/pcre4msc2 -d regexes/941120_1.txt subject2.txt
+
+PCRE
+====
+NEW
 
 RAW pattern:
 ============
@@ -438,9 +385,13 @@ Note, the sub-string between the two asterisks is also highlighted.
 ```bash
 src/pcre4msc3 -d pattern.txt subject.txt
 
+PCRE:
+=====
+NEW
+
 PATTERN:
 ========
-is
+(?:is)
 
 SUBJECT:
 ========
@@ -452,22 +403,20 @@ avaliable and used
 
 RESULT:
 =======
-pattern.txt - time elapsed: 0.000015, match value: SUBJECT MATCHED 4 TIMES
+pattern.txt - time elapsed: 0.000030633, match value: SUBJECT MATCHED 1 TIME
 
 CAPTURES:
 =========
-th*is* is what is this
-this *is* what is this
-this is what *is* this
-this is what is th*is*
+this is what is this
 
 OVECTOR:
 ========
-[2, 4, 5, 7, 13, 15, 18, 20]
+[2, 4]
+
 
 ```
-As you can see, the ModSecurity3 pattern matching code founds the all occurrence of sub-string. Note, that this isn't the escaped pattern part, because this engine doesn't do that. Match limit and match limit recursion also doesn't exists, because they aren't used.
 
-See the screenshot:
+Issues, feature requests
+------------------------
 
-![Details](images/detailed_debug.png)
+If you ran an unexpected behavior, found a bug, or have a feature request, just open an issue here, or drop an e-mail to us: modsecurity at digitalwave dot hu.

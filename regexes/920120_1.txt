@@ -1,1 +1,1 @@
-(?i)^(?:&(?:(?:[aeiouclnrszg]acut|[aeiou]grav|[anoi]tild)e|(?:[cgklnrst]cedi|[aeiouy]um)l|[aeioucghjswy]circ|[cdelnrstz]caron|a(?:pos|mp)|[au]ring|oslash|nbsp);|[^'\";=])*$
+(?i)^(?:&(?:(?:[acegilnorsuz]acut|[aeiou]grav|[aino]tild)e|[c-elnr-tz]caron|(?:[cgklnr-t]cedi|[aeiouy]um)l|[aceg-josuwy]circ|[au]ring|a(?:mp|pos)|nbsp|oslash);|[^\"';=\x5c])*$

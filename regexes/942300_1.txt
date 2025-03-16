@@ -1,1 +1,1 @@
-(?i)(?:\b(?:(?:r(?:egexp|like)|n(?:and|ot)|(?:x?x)?or|like|and|div)\s+\s*?\w+\(|b(?:etween\s+\s*?\w+\(|inary\s*?\(\s*?\d)|cha?r\s*?\(\s*?\d)|\)\s*?when\s*?\d+\s*?then|(?:\|\||&&)\s+\s*?\w+\(|[\"'`]\s*?(?:[#{]|--)|\/\*!\s?\d+)
+(?i)\)[\s\x0b]*?when[\s\x0b]*?[0-9]+[\s\x0b]*?then|[\"'`][\s\x0b]*?(?:[#\{]|--)|/\*![\s\x0b]?[0-9]+|\b(?:(?:binary|cha?r)[\s\x0b]*?\([\s\x0b]*?[0-9]|(?:and|n(?:and|ot)|(?:xx?)?or|div|like|between|r(?:egexp|like))[\s\x0b]+[0-9A-Z_a-z]+\()|(?:\|\||&&)[\s\x0b]*?[0-9A-Z_a-z]+\(

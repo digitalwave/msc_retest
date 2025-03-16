@@ -1,1 +1,0 @@
-^/wp/v[0-9]+/(?:posts|pages)
