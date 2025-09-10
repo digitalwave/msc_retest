@@ -1,8 +1,12 @@
 v0.5 - YYYY-MM-DD
 -----------------
-  * Added pcre2 support for pcre4msc3
+  * Added pcre2 support to pcre4msc3
     see PR #2719 in original code
     https://github.com/SpiderLabs/ModSecurity/pull/2719
+  * Added pcre2 support to pcre4msc2
+  * Added match_limit and matc_recursion_limit to pcre4msc3
+  * Added -q flag
+  * Removed old libmodsecurity3 `@rx` behavior
 
 v0.4 - 2021-12-18
 -----------------

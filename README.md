@@ -5,7 +5,9 @@ Welcome to the `msc_retest` documentation.
 Description
 ===========
 
-This tool compiles two binaries: `pcre4msc2` and `pcre4msc3`. The binaries emulates the behaviors of regex engines (both PCRE2 - the **NEW** - and PCRE3  - the old - versions) in mod_security2 (Apache module) and the libmodsecurity3. Please note, that the default PCRE engine is **PCRE2**. If you want to use the old PCRE engine, you should pass `-1` option to the tool. With these programs, you can check the evaluation time and result of every regular expressions with any random (including very extreme long) input. Both of them (regex pattern, input subject) needs to exists in two separated files, and you can pass them as argument. Subject can be passed through stdin, if you give '-' for subject file, eg:
+This tool compiles two binaries: `pcre4msc2` and `pcre4msc3`. The binaries emulates the behaviors of regex engines (both PCRE2 - the **NEW** - and PCRE3  - the old - versions) in mod_security2 (Apache module) and the libmodsecurity3. Please note, that the default PCRE engine is **PCRE2**. If you want to use the old PCRE engine, you should pass `-1` option to the tool. Tis works only if you built the tools with `--with-old-pcre` flag. Old PCRE is not available in newest Linux deistribution, eg. Debian 13.
+
+With these programs, you can check the evaluation time and result of every regular expressions with any random (including very extreme long) input. Both of them (regex pattern, input subject) needs to exists in two separated files, and you can pass them as argument. Subject can be passed through stdin, if you give '-' for subject file, eg:
 
 ```bash
 echo -n "arg=../../../etc/passwd&foo=var" | src/pcre4msc2 regexes/930110_1.txt -
@@ -52,7 +54,7 @@ limit match, limit match recursion
 * mod_security2 module uses the `PCRE_EXTRA_MATCH_LIMIT` and `PCRE_EXTRA_MATCH_LIMIT_RECURSION` (see this on same page) flags; if you don't set them before you build the source, the default values will be 1500
 * you can overwrite these values with `--enable-pcre-match-limit=N` and `--enable-pcre-match-limit-recursion=N`
 * you can disable these features with `--enable-pcre-match-limit=no` and `--enable-pcre-match-limit-recursion=no`
-* libmodsecurity3 doesn't supports these features at all
+* libmodsecurity3 also supports only `match_limit` but not the `match_limit_recursion`
 
 Here you can find more information about [pcre_study](https://www.pcre.org/original/doc/html/pcre_study.html), and [pcrejit](https://www.pcre.org/original/doc/html/pcrejit.html#SEC1). Also you can find some useful information about recursion limits [here](https://www.pcre.org/original/doc/html/pcreapi.html).
 
@@ -137,11 +139,12 @@ Based on the [information](#Useful%20information':ignore') above, now let's see 
 |   `-j` | no               | use jit          |     supported | not supported |
 |   `-s` | no               | ignore study     |     supported | not supported |
 |   `-n` | yes              | number of runs   |     supported |     supported |
-|   `-m` | yes              | match limit      |     supported | not supported |
+|   `-m` | yes              | match limit      |     supported |     supported |
 |   `-r` | yes              | match lim. rec.  |     supported | not supported |
 |   `-t` | yes              | exec. time lim.  |     supported |     supported |
 |   `-d` | no               | show details     |     supported |     supported |
 |   `-1` | no               | use pcre3 if av. |     supported |     supported |
+|   `-q` | no               | hide timing info |     supported |     supported |
 
 and `-h` of course.
 

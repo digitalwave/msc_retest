@@ -51,7 +51,7 @@ class RegexBase {
  public:
     RegexBase(const std::string& pattern_, int debuglevel);
     virtual ~RegexBase() {};
-    std::string pattern;
+    const std::string pattern;
     // m_debuglevel: not part of original code:
     int m_debuglevel;
     int m_ovector[OVECCOUNT];
@@ -60,8 +60,9 @@ class RegexBase {
     int m_execrc;
     std::list<SMatch> m_retList;
 
-    virtual std::list<SMatch> searchAll(const std::string& s) = 0;
-    virtual bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const = 0;
+    // old @rx implementation
+    //virtual std::list<SMatch> searchAll(const std::string& s) = 0;
+    virtual bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures, unsigned long match_limit) const = 0;
 };
 
 #ifdef WITH_OLD_PCRE
@@ -70,8 +71,8 @@ class Regex: public RegexBase {
     explicit Regex(const std::string& pattern_, int debuglevel);
     ~Regex() override;
 
-    std::list<SMatch> searchAll(const std::string& s) override;
-    bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const override;
+    //std::list<SMatch> searchAll(const std::string& s) override;
+    bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures, unsigned long match_limit) const override;
 
  private:
     pcre *m_pc = NULL;
@@ -84,8 +85,8 @@ class Regexv2: public RegexBase {
     explicit Regexv2(const std::string& pattern_, int debuglevel);
     ~Regexv2() override;
 
-    std::list<SMatch> searchAll(const std::string& s) override;
-    bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const override;
+    //std::list<SMatch> searchAll(const std::string& s) override;
+    bool searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures, unsigned long match_limit) const override;
 
  private:
     pcre2_code *m_pc;
