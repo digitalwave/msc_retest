@@ -28,7 +28,9 @@ RegexBase::RegexBase(const std::string& pattern_, int debuglevel, bool ignoreCas
     : pattern(pattern_.empty() ? ".*" : pattern_),
     m_debuglevel(debuglevel),
     m_ovector {0},
-    m_execrc(0) { };
+    m_execrc(0) {
+        (void)ignoreCase; // avoid unused parameter warning
+    };
 
 #ifdef WITH_OLD_PCRE
 Regex::Regex(const std::string& pattern_, int debuglevel, bool ignoreCase):
