@@ -25,8 +25,6 @@ extern "C" long double calc_std_deviation(const long double *, const int, const 
 extern "C" void show_stat(long double *, int);
 #else
 void translate_error(int, int, char *);
-int compare_ld (const void *, const void *);
-long double calc_std_deviation(const long double *, const int, const long double);
 void show_stat(long double *, int);
 #endif
 

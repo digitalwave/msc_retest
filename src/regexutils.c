@@ -257,13 +257,13 @@ void translate_error(int use_old_ver, int rc, char * rcerror) {
 #endif
 }
 
-int compare_ld (const void * a, const void * b) {
+static int compare_ld (const void * a, const void * b) {
   if (*(long double*)a > *(long double*)b) return 1;
   else if (*(long double*)a < *(long double*)b) return -1;
   else return 0;
 }
 
-long double calc_std_deviation(const long double * arr, const int n, const long double avg) {
+static long double calc_std_deviation(const long double * arr, const int n, const long double avg) {
     long double sum = 0.0;
     for(int i = 0; i < n; i++) {
         sum += powl(arr[i]-avg, 2.0);

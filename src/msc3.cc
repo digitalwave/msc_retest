@@ -37,7 +37,7 @@ int main(int argc, char ** argv) {
     int debuglevel = 0;  // may be later we can use different level...
     char stdinname[] = "-";
     int use_old_pcre = 0;
-    int match_limit = 0;
+    int match_limit = 1000;
     int quiet = 0;
 
     struct timespec ts_before, ts_after, ts_diff;
@@ -207,7 +207,14 @@ int main(int argc, char ** argv) {
         clock_gettime(CLOCK_REALTIME, &ts_before);
 
         captures.clear();
-        re->searchOneMatch(subject, captures, match_limit);
+        RegexResult res = re->searchOneMatch(subject, captures, match_limit);
+        if (res != RegexResult::Ok) {
+            if (res == RegexResult::ErrorMatchLimit) {
+                std::cerr << "Error: Match limit was reached." << std::endl;
+            } else {
+                std::cerr << "Error: An error occurred during regex execution." << std::endl;
+            }
+        }
         rc = captures.size();
 
         clock_gettime(CLOCK_REALTIME, &ts_after);

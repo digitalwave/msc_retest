@@ -50,7 +50,7 @@ void showhelp(const char * name) {
  * FOO:
  * ====
  */
-void debuglabel(int debuglevel, const char * label) {
+static void debuglabel(int debuglevel, const char * label) {
     if (debuglevel == 1) {
         int len = (int)strlen(label)+1; // +1 -> append ":"
         char * line = calloc(sizeof(char), len+2);
@@ -70,7 +70,7 @@ void debuglabel(int debuglevel, const char * label) {
 /*
  * show debug info with string argument
  */
-void debugstr(int debuglevel, const char * label, const char * value) {
+static void debugstr(int debuglevel, const char * label, const char * value) {
     if (debuglevel == 1) {
         debuglabel(debuglevel, label);
         printf("%s\n", value);
@@ -80,7 +80,7 @@ void debugstr(int debuglevel, const char * label, const char * value) {
 /*
  * show debug info with int argument
  */
-void debugint(int debuglevel, const char * label, int value) {
+static void debugint(int debuglevel, const char * label, int value) {
     if (debuglevel == 1) {
         debuglabel(debuglevel, label);
         printf("%d\n", value);
@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
     int match_limit_recursion_set = 0;
     float time_limit = 0.0;
     int debuglevel = 0;
-    char stdinname[] = "-";
+    const char stdinname[] = "-";
     int use_old_pcre = 0;
     int quiet = 0;
 
@@ -284,12 +284,16 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Match limit is not available in old PCRE\n");
             return EXIT_FAILURE;
         }
+#else
+        (void)match_limit_set; // cppcheck-suppress unusedVariable
 #endif
 #ifndef PCRE_EXTRA_MATCH_LIMIT_RECURSION
         if (match_limit_recursion_set == 1) {
             fprintf(stderr, "Match limit recursion is not available in old PCRE\n");
             return EXIT_FAILURE;
         }
+#else
+        (void)match_limit_recursion_set; // cppcheck-suppress unusedVariable
 #endif
     }
     else {
@@ -574,10 +578,8 @@ int main(int argc, char **argv) {
                 pcre2_ovector = pcre2_get_ovector_pointer(match_data);
                 if (pcre2_ovector != NULL) {
                     for (int k = 0; ((k < rc) && ((k*2) < ovecsize)); k++) {
-                        if ((k*2) < ovecsize) {
-                            ovector[2*k] = pcre2_ovector[2*k];
-                            ovector[2*k+1] = pcre2_ovector[2*k+1];
-                        }
+                        ovector[2*k] = pcre2_ovector[2*k];
+                        ovector[2*k+1] = pcre2_ovector[2*k+1];
                     }
                 }
             }
