@@ -21,6 +21,7 @@ void showhelp(const char * name) {
 #ifdef HAVE_PCRE2
     std::cout << "\t-1  \tuse OLD PCRE engine." << std::endl;
 #endif
+    std::cout << "\t-m M\tSet value M for the pcre_match_limit for pcre_extra. Default value is 1000." << std::endl;
     std::cout << "\t-d  \tShow detailed information." << std::endl;
     std::cout << std::endl;
 }
@@ -35,6 +36,7 @@ int main(int argc, char ** argv) {
     int debuglevel = 0;  // may be later we can use different level...
     char stdinname[] = "-";
     int use_old_pcre = 0;
+    int match_limit = 1000;
 
     struct timespec ts_before, ts_after, ts_diff;
     std::vector<long double> ld_diffs;
@@ -44,7 +46,7 @@ int main(int argc, char ** argv) {
       return EXIT_FAILURE;
     }
 
-    while ((c = getopt (argc, argv, "hn:t:d1")) != -1) {
+    while ((c = getopt (argc, argv, "hn:t:d1m:")) != -1) {
         switch (c) {
             case 'h':
                 showhelp(argv[0]);
@@ -75,6 +77,13 @@ int main(int argc, char ** argv) {
                 fprintf(stderr, "OLD PCRE engine is not available.\n");
                 return EXIT_FAILURE;
 #endif
+            case 'm':
+                match_limit = atoi(optarg);
+                if (match_limit < 0 || icnt > 100000) {
+                    fprintf(stderr, "Ohh... Try to pass for '-m' an integer between 0 and 100000\n");
+                    return EXIT_FAILURE;
+                }
+                break;
             case '?':
                 if (optopt == 'n' || optopt == 't') {
                     std::cerr << "Option -" << (char)optopt << " requires an argument." << std::endl;
@@ -187,7 +196,14 @@ int main(int argc, char ** argv) {
         clock_gettime(CLOCK_REALTIME, &ts_before);
 
         captures.clear();
-        re->searchOneMatch(subject, captures);
+        RegexResult res = re->searchOneMatch(subject, captures, match_limit);
+        if (res != RegexResult::Ok) {
+            if (res == RegexResult::ErrorMatchLimit) {
+                std::cerr << "Error: Match limit was reached." << std::endl;
+            } else {
+                std::cerr << "Error: An error occurred during regex execution." << std::endl;
+            }
+        }
         rc = captures.size();
 
         clock_gettime(CLOCK_REALTIME, &ts_after);

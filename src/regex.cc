@@ -24,23 +24,24 @@ void debugvalue(int debuglevel, const std::string &label, const std::string &val
     }
 }
 
-RegexBase::RegexBase(const std::string& pattern_, int debuglevel)
+RegexBase::RegexBase(const std::string& pattern_, int debuglevel, bool ignoreCase)
     : pattern(pattern_.empty() ? ".*" : pattern_),
     m_debuglevel(debuglevel),
     m_ovector {0},
     m_execrc(0) { };
 
 #ifdef WITH_OLD_PCRE
-Regex::Regex(const std::string& pattern_, int debuglevel): RegexBase::RegexBase(pattern_, debuglevel) {
+Regex::Regex(const std::string& pattern_, int debuglevel, bool ignoreCase):
+    RegexBase::RegexBase(pattern_, debuglevel, ignoreCase) {
 
-    const char *errptr = NULL;
+    const char *errptr = nullptr;
     int erroffset;
+    int flags = (PCRE_DOTALL|PCRE_MULTILINE);
 
-    if (pattern.empty() == true) {
-        pattern.assign(".*");
+    if (ignoreCase == true) {
+        flags |= PCRE_CASELESS;
     }
-
-    m_pc = pcre_compile(pattern.c_str(), PCRE_DOTALL|PCRE_MULTILINE,
+    m_pc = pcre_compile(pattern.c_str(), flags,
         &errptr, &erroffset, NULL);
     if (m_pc == NULL) {
         fprintf(stderr, "PCRE compilation failed at offset %d: %s\n", erroffset, errptr);
@@ -76,11 +77,20 @@ Regex::~Regex() {
     }
 }
 
-bool Regex::searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const {
+RegexResult Regex::searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures, unsigned long match_limit) const {
     const char *subject = s.c_str();
     int ovector[OVECCOUNT];
+    pcre_extra local_pce;
+    pcre_extra *pce = m_pce;
 
-    int rc = pcre_exec(m_pc, m_pce, subject, s.size(), 0, 0, ovector, OVECCOUNT);
+    if (m_pce != nullptr && match_limit > 0) {
+        local_pce = *m_pce;
+        local_pce.match_limit = match_limit;
+        local_pce.flags |= PCRE_EXTRA_MATCH_LIMIT;
+        pce = &local_pce;
+    }
+
+    int rc = pcre_exec(m_pc, pce, subject, s.size(), 0, 0, ovector, OVECCOUNT);
 
     for (int i = 0; i < rc; i++) {
         size_t start = ovector[2*i];
@@ -93,7 +103,7 @@ bool Regex::searchOneMatch(const std::string& s, std::vector<SMatchCapture>& cap
         captures.push_back(capture);
     }
 
-    return (rc > 0);
+    return to_regex_result(rc);
 }
 
 std::list<SMatch> Regex::searchAll(const std::string& s) {
@@ -136,15 +146,20 @@ std::list<SMatch> Regex::searchAll(const std::string& s) {
     return retList;
 }
 #endif
+// end of old pcre implementation
 
-Regexv2::Regexv2(const std::string& pattern_, int debuglevel): RegexBase::RegexBase(pattern_, debuglevel) {
-
+Regexv2::Regexv2(const std::string& pattern_, int debuglevel, bool ignoreCase):
+    RegexBase::RegexBase(pattern_, debuglevel, ignoreCase),
+    m_match_data(nullptr) {
     PCRE2_SPTR pcre2_pattern = reinterpret_cast<PCRE2_SPTR>(pattern.c_str());
     uint32_t pcre2_options = (PCRE2_DOTALL|PCRE2_MULTILINE);
+    if (ignoreCase) {
+        pcre2_options |= PCRE2_CASELESS;
+    }
     int errornumber = 0;
     PCRE2_SIZE erroroffset = 0;
     m_pc = pcre2_compile(pcre2_pattern, PCRE2_ZERO_TERMINATED,
-        pcre2_options, &errornumber, &erroroffset, NULL);
+        pcre2_options, &errornumber, &erroroffset, nullptr);
     if (m_pc == NULL) {
         PCRE2_UCHAR buffer[256];
         pcre2_get_error_message(errornumber, buffer, sizeof(buffer));
@@ -152,12 +167,7 @@ Regexv2::Regexv2(const std::string& pattern_, int debuglevel): RegexBase::RegexB
         fprintf(stderr, "Regex: '%s'\n", pcre2_pattern);
         exit(1);
     }
-    else {
-        m_match_data = pcre2_match_data_create_from_pattern(m_pc, NULL);
-        if (m_match_data == NULL) {
-            m_pc = NULL;
-        }
-    }
+
     m_pcje = pcre2_jit_compile(m_pc, PCRE2_JIT_COMPLETE);
     if (m_pcje == 0) {
         debugvalue(m_debuglevel, std::string("JIT"), std::string("avaliable and used"));
@@ -168,14 +178,27 @@ Regexv2::Regexv2(const std::string& pattern_, int debuglevel): RegexBase::RegexB
 }
 
 Regexv2::~Regexv2() {
-    pcre2_match_data_free(m_match_data);
     pcre2_code_free(m_pc);
 }
 
-bool Regexv2::searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures) const {
+RegexResult Regexv2::searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures, unsigned long match_limit) const {
+    Pcre2MatchContextPtr match_context;
+    if (match_limit > 0) {
+        // TODO: What if setting the match limit fails?
+        pcre2_set_match_limit(static_cast<pcre2_match_context*>(match_context), match_limit);
+    }
+
     PCRE2_SPTR pcre2_s = reinterpret_cast<PCRE2_SPTR>(s.c_str());
-    int rc = pcre2_match(m_pc, pcre2_s, s.length(), 0, 0, m_match_data, NULL);
-    const PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(m_match_data);
+    pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(m_pc, nullptr);
+    int rc = 0;
+    if (m_pcje == 0) {
+        rc = pcre2_jit_match(m_pc, pcre2_s, s.length(), 0, 0, match_data, static_cast<pcre2_match_context*>(match_context));
+    }
+
+    if (m_pcje != 0 || rc == PCRE2_ERROR_JIT_STACKLIMIT) {
+        rc = pcre2_match(m_pc, pcre2_s, s.length(), 0, PCRE2_NO_JIT, match_data, static_cast<pcre2_match_context*>(match_context));
+    }
+    const PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
 
     for (int i = 0; i < rc; i++) {
         size_t start = ovector[2*i];
@@ -187,8 +210,9 @@ bool Regexv2::searchOneMatch(const std::string& s, std::vector<SMatchCapture>& c
         SMatchCapture capture(i, start, len);
         captures.push_back(capture);
     }
+    pcre2_match_data_free(match_data);
 
-    return (rc > 0);
+    return to_regex_result(rc);
 }
 
 std::list<SMatch> Regexv2::searchAll(const std::string& s) {
@@ -234,5 +258,43 @@ std::list<SMatch> Regexv2::searchAll(const std::string& s) {
     } while (rc > 0);
 
     return retList;
+}
+
+#ifdef WITH_OLD_PCRE
+// cppcheck-suppress functionStatic
+RegexResult Regex::to_regex_result(int pcre_exec_result) const {
+    if (
+        pcre_exec_result > 0 ||
+        pcre_exec_result == PCRE_ERROR_NOMATCH
+    ) {
+        return RegexResult::Ok;
+    } else if(
+        pcre_exec_result == PCRE_ERROR_MATCHLIMIT
+    ) {
+        return RegexResult::ErrorMatchLimit;
+    } else {
+        // Note that this can include the case where the PCRE result was zero.
+        // Zero is returned if the offset vector is not large enough and can be considered an error.
+        return RegexResult::ErrorOther;
+    }
+}
+#endif
+
+// cppcheck-suppress functionStatic
+RegexResult Regexv2::to_regex_result(int pcre_exec_result) const {
+    if (
+        pcre_exec_result > 0 ||
+        pcre_exec_result == PCRE2_ERROR_NOMATCH
+    ) {
+        return RegexResult::Ok;
+    } else if(
+        pcre_exec_result == PCRE2_ERROR_MATCHLIMIT
+    ) {
+        return RegexResult::ErrorMatchLimit;
+    } else {
+        // Note that this can include the case where the PCRE result was zero.
+        // Zero is returned if the offset vector is not large enough and can be considered an error.
+        return RegexResult::ErrorOther;
+    }
 }
 
