@@ -23,7 +23,6 @@ void showhelp(const char * name) {
 #ifdef HAVE_PCRE2
     std::cout << "\t-1  \tuse OLD PCRE engine." << std::endl;
 #endif
-    std::cout << "\t-m M\tSet value M for the pcre_match_limit for pcre_extra. Default value is 1000." << std::endl;
     std::cout << "\t-d  \tShow detailed information." << std::endl;
     std::cout << std::endl;
 }
