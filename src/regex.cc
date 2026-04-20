@@ -24,26 +24,6 @@ void debugvalue(int debuglevel, const std::string &label, const std::string &val
     }
 }
 
-class Pcre2MatchContextPtr {
- public:
-    Pcre2MatchContextPtr()
-        : m_match_context(pcre2_match_context_create(nullptr)) {}
-
-		Pcre2MatchContextPtr(const Pcre2MatchContextPtr&) = delete;
-		Pcre2MatchContextPtr& operator=(const Pcre2MatchContextPtr&) = delete;
-
-    ~Pcre2MatchContextPtr() {
-        pcre2_match_context_free(m_match_context);
-    }
-
-    explicit operator pcre2_match_context*() const {
-        return m_match_context;
-    }
-
- private:
-    pcre2_match_context *m_match_context;
-};
-
 RegexBase::RegexBase(const std::string& pattern_, int debuglevel, bool ignoreCase)
     : pattern(pattern_.empty() ? ".*" : pattern_),
     m_debuglevel(debuglevel),

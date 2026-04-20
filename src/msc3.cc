@@ -87,12 +87,6 @@ int main(int argc, char ** argv) {
                 fprintf(stderr, "OLD PCRE engine is not available.\n");
                 return EXIT_FAILURE;
 #endif
-            case 'm':
-                match_limit = atoi(optarg);
-                if (match_limit < 0 || icnt > 100000) {
-                    fprintf(stderr, "Ohh... Try to pass for '-m' an integer between 0 and 100000\n");
-                    return EXIT_FAILURE;
-                }
             case 'q':
                 quiet = 1;
                 break;

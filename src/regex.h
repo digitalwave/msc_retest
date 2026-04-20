@@ -64,7 +64,6 @@ class RegexBase {
     int m_execrc;
     std::list<SMatch> m_retList;
 
-    virtual std::list<SMatch> searchAll(const std::string& s) = 0;
     virtual RegexResult searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures, unsigned long match_limit = 0) const = 0;
     virtual RegexResult to_regex_result(int pcre_exec_result) const = 0;
 };
@@ -75,7 +74,6 @@ class Regex: public RegexBase {
     explicit Regex(const std::string& pattern_, int debuglevel, bool ignoreCase = false);
     ~Regex() override;
 
-    std::list<SMatch> searchAll(const std::string& s) override;
     RegexResult searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures, unsigned long match_limit = 0) const override;
     RegexResult to_regex_result(int pcre_exec_result) const override;
 
@@ -90,7 +88,6 @@ class Regexv2: public RegexBase {
     explicit Regexv2(const std::string& pattern_, int debuglevel, bool ignoreCase = false);
     ~Regexv2() override;
 
-    std::list<SMatch> searchAll(const std::string& s) override;
     RegexResult searchOneMatch(const std::string& s, std::vector<SMatchCapture>& captures, unsigned long match_limit = 0) const override;
     RegexResult to_regex_result(int pcre_exec_result) const override;
 

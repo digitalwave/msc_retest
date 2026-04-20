@@ -578,10 +578,8 @@ int main(int argc, char **argv) {
                 pcre2_ovector = pcre2_get_ovector_pointer(match_data);
                 if (pcre2_ovector != NULL) {
                     for (int k = 0; ((k < rc) && ((k*2) < ovecsize)); k++) {
-                        if ((k*2) < ovecsize) {
-                            ovector[2*k] = pcre2_ovector[2*k];
-                            ovector[2*k+1] = pcre2_ovector[2*k+1];
-                        }
+                        ovector[2*k] = pcre2_ovector[2*k];
+                        ovector[2*k+1] = pcre2_ovector[2*k+1];
                     }
                 }
             }
