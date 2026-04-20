@@ -18,6 +18,8 @@ void showhelp(const char * name) {
     std::cout << "\t-n N\titerate pcre_regex as Nth times. Default value is 1." << std::endl;
     std::cout << "\t-t T\tExpects a float value; if the (last) pcre_exec time is greater than this," << std::endl;
     std::cout << "\t    \tthe exit status of program will non-zero." << std::endl;
+    std::cout << "\t-m M\tSet value M for the pcre_match_limit for pcre_extra. Default value is 1000." << std::endl;
+    std::cout << "\t-q\tDon't show match details and timing." << std::endl;
 #ifdef HAVE_PCRE2
     std::cout << "\t-1  \tuse OLD PCRE engine." << std::endl;
 #endif
@@ -37,6 +39,7 @@ int main(int argc, char ** argv) {
     char stdinname[] = "-";
     int use_old_pcre = 0;
     int match_limit = 1000;
+    int quiet = 0;
 
     struct timespec ts_before, ts_after, ts_diff;
     std::vector<long double> ld_diffs;
@@ -46,11 +49,18 @@ int main(int argc, char ** argv) {
       return EXIT_FAILURE;
     }
 
-    while ((c = getopt (argc, argv, "hn:t:d1m:")) != -1) {
+    while ((c = getopt (argc, argv, "hn:m:t:d1q")) != -1) {
         switch (c) {
             case 'h':
                 showhelp(argv[0]);
                 return EXIT_SUCCESS;
+            case 'm':
+                match_limit = atoi(optarg);
+                if (match_limit < 0 || match_limit > 100000) {
+                    std::cerr << "Ohh... Try to pass for '-m' an integer between 0 and 100000" << std::endl;
+                    return EXIT_FAILURE;
+                }
+                break;
             case 'n':
                 icnt = atoi(optarg);
                 if (icnt <= 0 || icnt > INT_MAX) {
@@ -83,6 +93,8 @@ int main(int argc, char ** argv) {
                     fprintf(stderr, "Ohh... Try to pass for '-m' an integer between 0 and 100000\n");
                     return EXIT_FAILURE;
                 }
+            case 'q':
+                quiet = 1;
                 break;
             case '?':
                 if (optopt == 'n' || optopt == 't') {
@@ -121,6 +133,12 @@ int main(int argc, char ** argv) {
     }
 
 #ifdef WITH_OLD_PCRE
+#ifndef PCRE_EXTRA_MATCH_LIMIT
+        if (match_limit_set == 1) {
+            std::cerr << "Match limit is not available in old PCRE" << std::endl;
+            return EXIT_FAILURE;
+        }
+#endif
     if (use_old_pcre == 1) {
         debugvalue(debuglevel, std::string("PCRE"), std::string("OLD"));
     }
@@ -168,7 +186,7 @@ int main(int argc, char ** argv) {
 
     debugvalue(debuglevel, std::string("SUBJECT"), subject);
 
-    re = NULL;
+    re = nullptr;
 
 #ifdef WITH_OLD_PCRE
     if (use_old_pcre == 1) {
@@ -215,7 +233,9 @@ int main(int argc, char ** argv) {
         }
         translate_error(use_old_pcre, rc, rcerror);
         debugvalue(debuglevel, std::string("RESULT"), std::string(""));
-        std::cout << patternfile << " - time elapsed: " << ts_diff.tv_sec << "." << std::fixed << std::setfill('0') << std::setw(9) << ts_diff.tv_nsec << ", match value: " << rcerror << std::endl;
+        if (quiet == 0) {
+            std::cout << patternfile << " - time elapsed: " << ts_diff.tv_sec << "." << std::fixed << std::setfill('0') << std::setw(9) << ts_diff.tv_nsec << ", match value: " << rcerror << std::endl;
+        }
         if (icnt > 1) {
             ld_diffs.push_back(ts_diff.tv_sec + (ts_diff.tv_nsec/1000000000.0));
         }

@@ -24,6 +24,26 @@ void debugvalue(int debuglevel, const std::string &label, const std::string &val
     }
 }
 
+class Pcre2MatchContextPtr {
+ public:
+    Pcre2MatchContextPtr()
+        : m_match_context(pcre2_match_context_create(nullptr)) {}
+
+		Pcre2MatchContextPtr(const Pcre2MatchContextPtr&) = delete;
+		Pcre2MatchContextPtr& operator=(const Pcre2MatchContextPtr&) = delete;
+
+    ~Pcre2MatchContextPtr() {
+        pcre2_match_context_free(m_match_context);
+    }
+
+    explicit operator pcre2_match_context*() const {
+        return m_match_context;
+    }
+
+ private:
+    pcre2_match_context *m_match_context;
+};
+
 RegexBase::RegexBase(const std::string& pattern_, int debuglevel, bool ignoreCase)
     : pattern(pattern_.empty() ? ".*" : pattern_),
     m_debuglevel(debuglevel),
@@ -105,46 +125,6 @@ RegexResult Regex::searchOneMatch(const std::string& s, std::vector<SMatchCaptur
 
     return to_regex_result(rc);
 }
-
-std::list<SMatch> Regex::searchAll(const std::string& s) {
-    const char *subject = s.c_str();
-    const std::string tmpString = std::string(s.c_str(), s.size());
-    int ovector[OVECCOUNT];
-    int rc, offset = 0;
-
-    std::list<SMatch> retList;
-
-    m_execrc = 0;
-
-    do {
-        rc = pcre_exec(m_pc, m_pce, subject,
-            s.size(), offset, 0, ovector, OVECCOUNT);
-
-        if (rc > 0) {
-            m_execrc += rc;
-        }
-
-        for (int i = 0; i < rc; i++) {
-            size_t start = ovector[2*i];
-            size_t end = ovector[2*i+1];
-            size_t len = end - start;
-            if (end > s.size()) {
-                rc = 0;
-                break;
-            }
-
-            std::string match = std::string(tmpString, start, len);
-            offset = start + len;
-            retList.push_front(SMatch(match, start));
-            if (len == 0) {
-                rc = 0;
-                break;
-            }
-        }
-    } while (rc > 0);
-
-    return retList;
-}
 #endif
 // end of old pcre implementation
 
@@ -158,6 +138,9 @@ Regexv2::Regexv2(const std::string& pattern_, int debuglevel, bool ignoreCase):
     }
     int errornumber = 0;
     PCRE2_SIZE erroroffset = 0;
+
+    m_match_data = nullptr;
+
     m_pc = pcre2_compile(pcre2_pattern, PCRE2_ZERO_TERMINATED,
         pcre2_options, &errornumber, &erroroffset, nullptr);
     if (m_pc == NULL) {
@@ -215,50 +198,7 @@ RegexResult Regexv2::searchOneMatch(const std::string& s, std::vector<SMatchCapt
     return to_regex_result(rc);
 }
 
-std::list<SMatch> Regexv2::searchAll(const std::string& s) {
 
-    int rc;
-
-    std::list<SMatch> retList;
-
-    PCRE2_SPTR pcre2_s = reinterpret_cast<PCRE2_SPTR>(s.c_str());
-    PCRE2_SIZE offset = 0;
-
-    m_execrc = 0;
-
-    do {
-        if (m_pcje == 0) {
-            rc = pcre2_jit_match(m_pc, pcre2_s, s.length(),
-                            offset, 0, m_match_data, nullptr);
-        }
-        if (m_pcje != 0 || rc == PCRE2_ERROR_JIT_STACKLIMIT) {
-            rc = pcre2_match(m_pc, pcre2_s, s.length(),
-                            offset, PCRE2_NO_JIT, m_match_data, nullptr);
-        }
-
-        const PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(m_match_data);
-
-        for (int i = 0; i < rc; i++) {
-            size_t start = ovector[2*i];
-            size_t end = ovector[2*i+1];
-            size_t len = end - start;
-            if (end > s.size()) {
-                rc = -1;
-                break;
-            }
-            std::string match = std::string(s, start, len);
-            offset = start + len;
-            retList.push_front(SMatch(match, start));
-
-            if (len == 0) {
-                rc = 0;
-                break;
-            }
-        }
-    } while (rc > 0);
-
-    return retList;
-}
 
 #ifdef WITH_OLD_PCRE
 // cppcheck-suppress functionStatic

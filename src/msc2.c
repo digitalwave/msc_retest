@@ -37,6 +37,7 @@ void showhelp(const char * name) {
 #ifdef WITH_OLD_PCRE
     printf("\t-1  \tuse OLD PCRE engine.\n");
 #endif
+    printf("\t-q\tDon't show match details and timing.\n");
     printf("\t-t T\tExpects a float value; if the (last) pcre_exec time is greater than this,\n");
     printf("\t    \tthe exit status of program will non-zero.\n");
     printf("\t-d  \tShow detailed information.\n");
@@ -159,10 +160,12 @@ int main(int argc, char **argv) {
     int debuglevel = 0;
     const char stdinname[] = "-";
     int use_old_pcre = 0;
+    int quiet = 0;
 
     pcre2_code *pcre2;
     int error_number = 0;
     pcre2_match_context *match_context = NULL;
+    pcre2_match_data *match_data = NULL;
     int jit_compile_rc = 0; // cppcheck-suppress unreadVariable
 
 
@@ -176,7 +179,7 @@ int main(int argc, char **argv) {
       return EXIT_FAILURE;
     }
 
-    while ((c = getopt (argc, argv, "hjm:r:sn:t:d1")) != -1) {
+    while ((c = getopt (argc, argv, "hjm:r:sn:t:d1q")) != -1) {
         switch (c) {
             case 'h':
                 showhelp(argv[0]);
@@ -229,6 +232,9 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "OLD PCRE engine is not available.\n");
                 return EXIT_FAILURE;
 #endif
+            case 'q':
+                quiet = 1;
+                break;
             case '?':
                 if (optopt == 'n' || optopt == 'm' || optopt == 'r' || optopt == 't') {
                     fprintf (stderr, "Option -%c requires an argument.\n", optopt);
@@ -397,11 +403,12 @@ int main(int argc, char **argv) {
 #endif
 
         if (pce == NULL) {
-            pce = calloc(1, sizeof(pcre_extra));
+            pce = (pcre_extra*)pcre_malloc(sizeof(pcre_extra));
             if (pce == NULL) {
-                fprintf(stderr, "Calloc failure for `pce`.\n");
+                fprintf(stderr, "Can't allocate memory for `pce`.\n");
                 return EXIT_FAILURE;
             }
+            memset(pce, 0, sizeof(pcre_extra));
         }
 
 #ifdef PCRE_EXTRA_MATCH_LIMIT
@@ -435,7 +442,8 @@ int main(int argc, char **argv) {
         pcre2 = pcre2_compile(
             (const unsigned char *)escaped_pattern,
             PCRE2_ZERO_TERMINATED,
-            PCRE_DOTALL | PCRE_DOLLAR_ENDONLY, /* options from re_operators */
+            //PCRE2_DOTALL | PCRE2_DOLLAR_ENDONLY, /* options from re_operators */
+            PCRE2_DOTALL|PCRE2_MULTILINE,
             &error_number,
             &sterroffset,
             NULL
@@ -443,13 +451,24 @@ int main(int argc, char **argv) {
         if (pcre2 == NULL) {
             PCRE2_UCHAR buffer[256];
             pcre2_get_error_message(error_number, buffer, sizeof(buffer));
-            fprintf(stderr, "PCRE2 compilation failed: %s\n", buffer);
+            fprintf(stderr, "PCRE2 compilation failed: %s (%d)\n", buffer, error_number);
             fprintf(stderr, "Stripped regex: '%s'\n", escaped_pattern);
             return EXIT_FAILURE;
         }
 
     #ifdef PCRE2_CONFIG_JIT
-        jit_compile_rc = pcre2_jit_compile(pcre2, PCRE2_JIT_COMPLETE);
+        if (use_jit == 1) {
+            jit_compile_rc = pcre2_jit_compile(pcre2, PCRE2_JIT_COMPLETE);
+            debugstr(debuglevel, "JIT", "available and enabled");
+        }
+        else {
+            debugstr(debuglevel, "JIT", "available but disabled");
+        }
+    #else
+        if (use_jit == 1) {
+            fprintf(stderr, "JIT is not available in this PCRE2 library\n");
+            return EXIT_FAILURE;
+        }
     #endif
 
         /* Setup the pcre2 match context */
@@ -458,9 +477,12 @@ int main(int argc, char **argv) {
             fprintf(stderr, "PCRE2 match context creation failed.\n");
             return EXIT_FAILURE;
         }
-
-        pcre2_set_match_limit(match_context, match_limit);
-        pcre2_set_depth_limit(match_context, match_limit_recursion);
+        if (match_limit_set == 1 && match_limit > 0) {
+            pcre2_set_match_limit(match_context, match_limit);
+        }
+        if (match_limit_recursion_set == 1 && match_limit_recursion > 0) {
+            pcre2_set_depth_limit(match_context, match_limit_recursion);
+        }
     }
 
 
@@ -472,6 +494,19 @@ int main(int argc, char **argv) {
         ts_diff.tv_sec  = 0;
         ts_diff.tv_nsec = 0;
 
+        PCRE2_SPTR pcre2_s = (PCRE2_SPTR)subject;
+        const PCRE2_SIZE *pcre2_ovector = NULL;
+        PCRE2_SIZE startoffset = 0;
+
+        if (use_old_pcre == 0) {
+            match_data = pcre2_match_data_create_from_pattern(pcre2, NULL);
+            if (match_data == NULL) {
+                pcre2_code_free(pcre2);
+                pcre2 = NULL;
+                fprintf(stderr, "PCRE2 match data creation failed.\n");
+                return EXIT_FAILURE;
+            }
+        }
         clock_gettime(CLOCK_REALTIME, &ts_before);
 #ifdef WITH_OLD_PCRE
         if (use_old_pcre == 1) {
@@ -488,13 +523,6 @@ int main(int argc, char **argv) {
         }
         else {
 #endif
-            PCRE2_SPTR pcre2_s;
-            pcre2_match_data *match_data;
-            const PCRE2_SIZE *pcre2_ovector = NULL;
-            PCRE2_SIZE startoffset = 0;
-
-            pcre2_s = (PCRE2_SPTR)subject;
-            match_data = pcre2_match_data_create_from_pattern(pcre2, NULL);
 
 #ifdef PCRE2_CONFIG_JIT
             if (use_jit == 1) {
@@ -508,21 +536,17 @@ int main(int argc, char **argv) {
                         match_data,
                         match_context
                     );
-                    if (rc == PCRE2_ERROR_JIT_STACKLIMIT) {
-                        rc = pcre2_match(
-                            pcre2,
-                            pcre2_s,
-                            subject_length,
-                            (PCRE2_SIZE)(startoffset),
-                            (PCRE2_NO_JIT | (PCRE_DOTALL | PCRE_DOLLAR_ENDONLY)),
-                            match_data,
-                            match_context
-                        );
-                    }
                 }
-                else {
-                    fprintf(stderr, "JIT wanted but failed to use it.\n");
-                    return EXIT_FAILURE;
+                if (jit_compile_rc != 0 || rc == PCRE2_ERROR_JIT_STACKLIMIT) {
+                    rc = pcre2_match(
+                        pcre2,
+                        pcre2_s,
+                        subject_length,
+                        (PCRE2_SIZE)(startoffset),
+                        (PCRE2_NO_JIT | PCRE2_NOTEMPTY),
+                        match_data,
+                        match_context
+                    );
                 }
             }
             else {
@@ -531,35 +555,35 @@ int main(int argc, char **argv) {
                     pcre2_s,
                     subject_length,
                     (PCRE2_SIZE)(startoffset),
-                    PCRE_DOTALL | PCRE_DOLLAR_ENDONLY, /* options from re_operators */
+                    PCRE2_NOTEMPTY, /* options from re_operators */
                     match_data,
                     match_context
                 );
             }
 #else
+            fprintf(stderr, "JIT does not available.\n");
             rc = pcre2_match(
                 pcre2,
                 pcre2_s,
                 subject_length,
                 (PCRE2_SIZE)(startoffset),
-                PCRE_DOTALL | PCRE_DOLLAR_ENDONLY, /* options from re_operators */
+                PCRE2_NOTEMPTY, /* options from re_operators */
                 match_data,
                 match_context
             );
 #endif
+
             PCRE2_SIZE ovecsize = 0; // cppcheck-suppress unreadVariable
             if (match_data != NULL) {
                 pcre2_ovector = pcre2_get_ovector_pointer(match_data);
-                 ovecsize = pcre2_get_ovector_count(match_data);
                 if (pcre2_ovector != NULL) {
-                    for (int k = 0; ((k < rc) && ((k*2) <= ovecsize)); k++) {
+                    for (int k = 0; ((k < rc) && ((k*2) < ovecsize)); k++) {
                         if ((k*2) < ovecsize) {
                             ovector[2*k] = pcre2_ovector[2*k];
                             ovector[2*k+1] = pcre2_ovector[2*k+1];
                         }
                     }
                 }
-                pcre2_match_data_free(match_data);
             }
 #ifdef WITH_OLD_PCRE
         }
@@ -569,10 +593,16 @@ int main(int argc, char **argv) {
         timespec_diff(&ts_after, &ts_before, &ts_diff);
         translate_error(use_old_pcre, rc, rcerror);
         debuglabel(debuglevel, "RESULT");
-        printf("%s - time elapsed: %ld.%09ld, match value: %s\n", patternfile, (long int)ts_diff.tv_sec, (long int)ts_diff.tv_nsec, rcerror);
+        if (quiet == 0) {
+            printf("%s - time elapsed: %ld.%09ld, match value: %s\n", patternfile, (long int)ts_diff.tv_sec, (long int)ts_diff.tv_nsec, rcerror);
+        }
         if (icnt > 1) {
             ld_diffs[i] = ts_diff.tv_sec + (ts_diff.tv_nsec/1000000000.0);
         }
+    }
+
+    if (match_data != NULL) {
+        pcre2_match_data_free(match_data);
     }
 
     if (icnt > 1) {
