@@ -1,4 +1,4 @@
-AM_CXXFLAGS = -Wall -g -O0 -std=c++11 -fPIC
+AM_CXXFLAGS = -Wall -g -O0 -std=c++17 -fPIC
 AM_CFLAGS = -Wall -g -O0
 AM_LDFLAGS= $(PCRE2_LDFLAGS) $(PCRE_OLD_LDFLAGS)
 

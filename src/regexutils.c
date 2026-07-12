@@ -317,3 +317,40 @@ void show_stat(long double * ld_diffs, int icnt) {
     printf("Std deviation: %013.9Lf\n", calc_std_deviation(ld_diffs, icnt, ld_mean));
 #endif
 }
+
+void strip_ignorecase_modifiers(const char *source, char *output, size_t out_size) {
+    int errorcode;
+    PCRE2_SIZE erroroffset;
+
+    // This regex finds all inline modifiers that tamper with the 'i' letter:
+    // 1. Optional '-' sign followed by 'i' letter: (? ... (-)?i ... )
+    // 2. Or the grouped version: (?i: ... ) -> from this (?: will be
+    PCRE2_SPTR target_pattern = (PCRE2_SPTR)"\\(\\?-[iI]\\)|\\(\\?[iI]\\)|\\(\\?-[^)]*[iI][^)]*\\)|\\(\\?[^)-]*[iI][^)]*\\)";
+    PCRE2_SPTR replacement = (PCRE2_SPTR)""; // Simply remove the matched inline modifiers
+
+    pcre2_code *re = pcre2_compile(target_pattern, PCRE2_ZERO_TERMINATED, 0, &errorcode, &erroroffset, NULL);
+    if (!re) {
+        // If the cleaning pattern is faulty (unlikely), return the original
+        strncpy(output, source, out_size);
+        return;
+    }
+
+    PCRE2_SIZE outlen = out_size;
+    int rc = pcre2_substitute(
+        re,
+        (PCRE2_SPTR)source, PCRE2_ZERO_TERMINATED,
+        0, PCRE2_SUBSTITUTE_GLOBAL,
+        NULL, NULL,
+        replacement, PCRE2_ZERO_TERMINATED,
+        (PCRE2_UCHAR*)output, &outlen
+    );
+
+    if (rc < 0) {
+        // In case of an error (e.g., not enough space), copy the original as a fallback
+        strncpy(output, source, out_size);
+    } else {
+        output[outlen] = '\0'; // Close the output string properly
+    }
+
+    pcre2_code_free(re);
+}

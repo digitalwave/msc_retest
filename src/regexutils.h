@@ -19,13 +19,15 @@
 #endif
 
 #ifdef __cplusplus
-extern "C" void translate_error(int, int, char *);
+extern "C" void translate_error(int use_old_ver, int rc, char * rcerror);
 extern "C" int compare_ld (const void *, const void *);
 extern "C" long double calc_std_deviation(const long double *, const int, const long double);
-extern "C" void show_stat(long double *, int);
+extern "C" void show_stat(long double * ld_diffs, int icnt);
+extern "C" void strip_ignorecase_modifiers(const char *source, char *output, size_t out_size);
 #else
-void translate_error(int, int, char *);
-void show_stat(long double *, int);
+void translate_error(int use_old_ver, int rc, char * rcerror);
+void show_stat(long double * ld_diffs, int icnt);
+void strip_ignorecase_modifiers(const char *source, char *output, size_t out_size);
 #endif
 
 #include <time.h>

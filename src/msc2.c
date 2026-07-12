@@ -18,6 +18,31 @@
 #define OVECCOUNT 30    /* should be a multiple of 3 */
 #define FILESIZEMAX 131072
 
+static int lowercase_execute(unsigned char *input,
+                             long int input_len,
+                             char **rval,
+                             long int *rval_len)
+{
+    long int i;
+    int changed = 0;
+
+    if (rval == NULL) return -1;
+    *rval = NULL;
+
+    i = 0;
+    while(i < input_len) {
+        int x = input[i];
+        input[i] = tolower(x);
+        if (x != input[i]) changed = 1;
+        i++;
+    }
+
+    *rval = (char *)input;
+    *rval_len = input_len;
+
+    return changed;
+}
+
 void showhelp(const char * name) {
     printf("Use: %s [OPTIONS] patternfile subjectfile\n\n", name);
     printf("You can pass subject through stdin, just give the '-' as subjectfile or leave it.\n\n");
@@ -41,6 +66,8 @@ void showhelp(const char * name) {
     printf("\t-t T\tExpects a float value; if the (last) pcre_exec time is greater than this,\n");
     printf("\t    \tthe exit status of program will non-zero.\n");
     printf("\t-d  \tShow detailed information.\n");
+    printf("\t-i  \tIgnore (?i) modifiers.\n");
+    printf("\t-l  \tUse 'lowercase' transformation for the subject.\n");
     printf("\n");
 }
 
@@ -139,6 +166,7 @@ int main(int argc, char **argv) {
 #endif
     const char *error;
     char pattern[FILESIZEMAX+1] = "";
+    char pattern_ignorecase[FILESIZEMAX+1] = "";
     char *escaped_pattern;
     char subject[FILESIZEMAX+1] = "";
     int erroffset;
@@ -161,6 +189,8 @@ int main(int argc, char **argv) {
     const char stdinname[] = "-";
     int use_old_pcre = 0;
     int quiet = 0;
+    int ignore_case = 0;
+    int use_lowercase = 0;
 
     pcre2_code *pcre2;
     int error_number = 0;
@@ -179,7 +209,7 @@ int main(int argc, char **argv) {
       return EXIT_FAILURE;
     }
 
-    while ((c = getopt (argc, argv, "hjm:r:sn:t:d1q")) != -1) {
+    while ((c = getopt (argc, argv, "hjm:r:sn:t:d1qil")) != -1) {
         switch (c) {
             case 'h':
                 showhelp(argv[0]);
@@ -207,11 +237,20 @@ int main(int argc, char **argv) {
                 use_study = 0;
                 break;
             case 'n':
-                icnt = atoi(optarg);
-                if (icnt <= 0 || icnt > INT_MAX) {
+                char *endptr;
+                // read the value as long, and check for errors
+                long val = strtol(optarg, &endptr, 10);
+
+                // Check for errors:
+                // 1. Not a number (*endptr is not the end of the string)
+                // 2. Less than or equal to 0
+                // 3. Greater than INT_MAX
+                if (*endptr != '\0' || val <= 0 || val > INT_MAX) {
                     fprintf(stderr, "Ohh... Try to pass for '-n' an integer between 1 and %d\n", INT_MAX);
                     return EXIT_FAILURE;
                 }
+
+                icnt = (int)val; // cast to int after validation
                 break;
             case 't':
                 time_limit = atof(optarg);
@@ -234,6 +273,12 @@ int main(int argc, char **argv) {
 #endif
             case 'q':
                 quiet = 1;
+                break;
+            case 'i':
+                ignore_case = 1;
+                break;
+            case 'l':
+                use_lowercase = 1;
                 break;
             case '?':
                 if (optopt == 'n' || optopt == 'm' || optopt == 'r' || optopt == 't') {
@@ -322,13 +367,16 @@ int main(int argc, char **argv) {
         pattern[i++] = ci;
     }
     fclose(fp);
+    if (ignore_case > 0) {
+        strip_ignorecase_modifiers(pattern, pattern_ignorecase, sizeof(pattern_ignorecase));
+    }
     if (i == FILESIZEMAX && ci != EOF) {
         fprintf (stderr, "File too long: %s\n", patternfile);
         return EXIT_FAILURE;
     }
 
     // remove extra slashes
-    escaped_pattern = strip_slashes(pattern, strlen(pattern));
+    escaped_pattern = (ignore_case == 0) ? strip_slashes(pattern, strlen(pattern)) : strip_slashes(pattern_ignorecase, strlen(pattern_ignorecase));
 
     // read subject
     //   if filename was given
@@ -362,6 +410,14 @@ int main(int argc, char **argv) {
     debugstr(debuglevel, "RAW pattern", pattern);
     debugstr(debuglevel, "ESCAPED pattern", escaped_pattern);
     debugstr(debuglevel, "SUBJECT", subject);
+    if (use_lowercase == 1) {
+        char subject_lowercase[FILESIZEMAX+1] = "";
+        char * subject_lowercase_ptr = subject_lowercase;
+        long int subject_lowercase_len = 0;
+        lowercase_execute((unsigned char *)subject, subject_length, &subject_lowercase_ptr, &subject_lowercase_len);
+        debugstr(debuglevel, "SUBJECT (lowercase)", subject_lowercase_ptr);
+        memcpy(subject, subject_lowercase_ptr, subject_lowercase_len);
+    }
 
 #ifdef WITH_OLD_PCRE
     if (use_old_pcre == 1) {
@@ -576,6 +632,7 @@ int main(int argc, char **argv) {
             PCRE2_SIZE ovecsize = 0; // cppcheck-suppress unreadVariable
             if (match_data != NULL) {
                 pcre2_ovector = pcre2_get_ovector_pointer(match_data);
+                ovecsize = pcre2_get_ovector_count(match_data);
                 if (pcre2_ovector != NULL) {
                     for (int k = 0; ((k < rc) && ((k*2) < ovecsize)); k++) {
                         ovector[2*k] = pcre2_ovector[2*k];

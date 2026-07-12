@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <limits.h>
+#include <algorithm>
 #include "regex.h"
 
 void showhelp(const char * name) {
@@ -24,13 +25,39 @@ void showhelp(const char * name) {
     std::cout << "\t-1  \tuse OLD PCRE engine." << std::endl;
 #endif
     std::cout << "\t-d  \tShow detailed information." << std::endl;
+    std::cout << "\t-i  \tIgnore (?i) modifiers." << std::endl;
+    std::cout << "\t-l  \tUse 'lowercase' transformation for the subject." << std::endl;
     std::cout << std::endl;
 }
+
+class LowerCase {
+ public:
+    template<typename Operation>
+    static bool convert(std::string &val, Operation op) {
+        bool changed = false;
+
+        std::transform(val.begin(), val.end(), val.data(),
+                       [&](auto c) {
+                            const auto nc = op(c);
+                            if(nc != c) changed = true;
+                            return nc; });
+
+        return changed;
+    }
+
+    // cppcheck-suppress functionStatic
+    bool transform(std::string &value) const {
+        return convert(value, [](auto c) {
+            return std::tolower(c); });
+    }
+
+};
 
 int main(int argc, char ** argv) {
     RegexBase *re;
     char rcerror[100];
-    char * patternfile = NULL, * subjectfile = NULL;
+    char * patternfile = NULL;
+    char * subjectfile = NULL;
     char c;
     int icnt = 1, rc = 0;
     float time_limit = 0.0;
@@ -39,6 +66,8 @@ int main(int argc, char ** argv) {
     int use_old_pcre = 0;
     int match_limit = 1000;
     int quiet = 0;
+    int ignore_case = 0;
+    int use_lowercase = 0;
 
     struct timespec ts_before, ts_after, ts_diff;
     std::vector<long double> ld_diffs;
@@ -48,7 +77,7 @@ int main(int argc, char ** argv) {
       return EXIT_FAILURE;
     }
 
-    while ((c = getopt (argc, argv, "hn:m:t:d1q")) != -1) {
+    while ((c = getopt (argc, argv, "hn:m:t:d1qil")) != -1) {
         switch (c) {
             case 'h':
                 showhelp(argv[0]);
@@ -61,10 +90,21 @@ int main(int argc, char ** argv) {
                 }
                 break;
             case 'n':
-                icnt = atoi(optarg);
-                if (icnt <= 0 || icnt > INT_MAX) {
-                    std::cerr << "Ohh... Try to pass for '-n' an integer between 1 and " << INT_MAX << std::endl;
+                {
+                char *endptr;
+                // read the value as long, and check for errors
+                long val = strtol(optarg, &endptr, 10);
+
+                // Check for errors:
+                // 1. Not a number (*endptr is not the end of the string)
+                // 2. Less than or equal to 0
+                // 3. Greater than INT_MAX
+                if (*endptr != '\0' || val <= 0 || val > INT_MAX) {
+                    fprintf(stderr, "Ohh... Try to pass for '-n' an integer between 1 and %d\n", INT_MAX);
                     return EXIT_FAILURE;
+                }
+
+                icnt = (int)val; // cast to int after validation
                 }
                 break;
             case 't':
@@ -88,6 +128,12 @@ int main(int argc, char ** argv) {
 #endif
             case 'q':
                 quiet = 1;
+                break;
+            case 'i':
+                ignore_case = 1;
+                break;
+            case 'l':
+                use_lowercase = 1;
                 break;
             case '?':
                 if (optopt == 'n' || optopt == 't') {
@@ -152,6 +198,12 @@ int main(int argc, char ** argv) {
         std::cout << "Can't open file: " << patternfile << std::endl;
     }
 
+    if (ignore_case > 0) {
+        std::vector<char> buffer(pattern.size() + 1);
+        strip_ignorecase_modifiers(pattern.c_str(), buffer.data(), buffer.size());
+        pattern = std::string(buffer.data());
+    }
+
     debugvalue(debuglevel, std::string("PATTERN"), pattern);
 
     std::string subject;
@@ -177,6 +229,10 @@ int main(int argc, char ** argv) {
       subject.assign(it, end);
     }
 
+    if (use_lowercase == 1) {
+        LowerCase lc;
+        lc.transform(subject);
+    }
     debugvalue(debuglevel, std::string("SUBJECT"), subject);
 
     re = nullptr;
